@@ -10,7 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dirtfy.srr.view.mine.MineMainScreen
-import com.dirtfy.srr.view.theme.SRRTheme // Replace with your actual theme package
+import com.dirtfy.srr.view.theme.SRRTheme
 
 class MineFragment : Fragment() {
 
@@ -24,12 +24,16 @@ class MineFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 SRRTheme {
-                    // 1. Collect state from ViewModel
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-                    // 2. Use the new Main Screen
-                    // We pass the items from our ViewModel state into the screen
-                    MineMainScreen(items = uiState.items)
+                    MineMainScreen(
+                        uiState = uiState,
+                        onToggleView = { viewModel.toggleView() },
+                        onItemClick = { item -> viewModel.selectItem(item) },
+                        onFeatureClick = { feature -> viewModel.selectFeature(feature) },
+                        // Removed onDismissPopup because we are now using Detail Navigation
+                        onBackToGrid = { viewModel.clearSelection() }
+                    )
                 }
             }
         }

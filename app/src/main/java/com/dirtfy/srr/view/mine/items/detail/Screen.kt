@@ -13,13 +13,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,10 +34,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.dirtfy.srr.view.mine.features.FeedbackRatingScreen
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedbackRatingScreen() {
+fun ItemDetailScreen(
+    title: String,          // Added title parameter
+    onBackClick: () -> Unit // Added back click callback
+) {
     val features = listOf(
         Item(1, "High Resolution Support", true),
         Item(2, "Cloud Backup", true),
@@ -42,7 +49,21 @@ fun FeedbackRatingScreen() {
         Item(5, "Premium Filters", false)
     )
 
-    Scaffold { innerPadding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = title) }, // Displays the clicked item's name
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -117,7 +138,6 @@ fun FeatureStatusRow(feature: Item) {
             )
         } else {
             Icon(
-                // Replaced Cancel with Close
                 imageVector = Icons.Filled.Close,
                 contentDescription = "Missed",
                 tint = MaterialTheme.colorScheme.error,
@@ -131,6 +151,9 @@ fun FeatureStatusRow(feature: Item) {
 @Composable
 fun FeedbackPreview() {
     MaterialTheme {
-        FeedbackRatingScreen()
+        ItemDetailScreen(
+            title = "Premium Subscription",
+            onBackClick = {}
+        )
     }
 }

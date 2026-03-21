@@ -2,6 +2,7 @@ package com.dirtfy.srr.view.mine.items
 
 import android.R
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,28 +26,37 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-
 @Composable
-fun ItemGridScreen(items: List<Item>) {
+fun ItemGridScreen(
+    items: List<Item>,
+    onItemClick: (Item) -> Unit = {} // 1. Added click listener parameter
+) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2), // Sets a 2-column grid
+        columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize()
     ) {
         items(items) { item ->
-            GridTile(item)
+            // 2. Pass the click listener down to the tile
+            GridTile(item = item, onItemClick = onItemClick)
         }
     }
 }
 
 @Composable
-fun GridTile(item: Item) {
+fun GridTile(
+    item: Item,
+    onItemClick: (Item) -> Unit // 3. Added parameter here
+) {
     Card(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            // 4. Added clickable modifier to capture the touch event
+            .clickable { onItemClick(item) }
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
@@ -76,12 +86,10 @@ fun ItemGridScreenPreview() {
     val sampleItems = listOf(
         Item("Item 1", R.drawable.ic_menu_gallery),
         Item("Item 2", R.drawable.ic_menu_camera),
-        Item("Item 3", R.drawable.ic_menu_mapmode),
-        Item("Item 4", R.drawable.ic_menu_agenda),
-        Item("Item 5", R.drawable.ic_menu_directions),
-        Item("Item 6", R.drawable.ic_menu_compass)
+        Item("Item 3", R.drawable.ic_menu_mapmode)
     )
     MaterialTheme {
-        ItemGridScreen(items = sampleItems)
+        // Preview works with an empty lambda
+        ItemGridScreen(items = sampleItems, onItemClick = {})
     }
 }
