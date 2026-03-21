@@ -1,4 +1,4 @@
-package com.dirtfy.srr.ui.theme
+package com.dirtfy.srr.view.theme
 
 import androidx.compose.ui.graphics.Color
 

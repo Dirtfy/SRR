@@ -1,4 +1,4 @@
-package com.dirtfy.srr.ui.theme
+package com.dirtfy.srr.view.theme
 
 import android.app.Activity
 import android.os.Build

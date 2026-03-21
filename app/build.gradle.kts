@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.dirtfy.srr"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.dirtfy.srr"
