@@ -13,15 +13,14 @@ import com.dirtfy.srr.view.mine.features.FeatureListScreen
 import com.dirtfy.srr.view.mine.items.detail.ItemDetailScreen
 import com.dirtfy.srr.view.mine.features.detail.FeatureDetailScreen
 import com.dirtfy.srr.view.mine.features.detail.ItemDetailPopup
-import com.dirtfy.srr.viewmodel.user.MineUiState
+import com.dirtfy.srr.viewmodel.user.UserUiState
 // Explicitly import Item classes for mock data in Previews
 import com.dirtfy.srr.view.mine.items.Item as GridItem
 import com.dirtfy.srr.view.mine.features.Item as RatingItem
-import com.dirtfy.srr.view.mine.features.detail.Item as DetailSubItem
 
 @Composable
 fun MineMainScreen(
-    uiState: MineUiState,
+    uiState: UserUiState,
     onToggleView: () -> Unit,
     onItemClick: (com.dirtfy.srr.view.mine.items.Item) -> Unit,
     onFeatureClick: (com.dirtfy.srr.view.mine.features.Item) -> Unit,
@@ -115,7 +114,7 @@ fun MineMainScreenGridPreview() {
 
     MaterialTheme {
         MineMainScreen(
-            uiState = MineUiState(
+            uiState = UserUiState(
                 items = mockItems,
                 isFeaturesView = false,
                 isLoading = false
@@ -140,7 +139,7 @@ fun MineMainScreenFeaturesPreview() {
 
     MaterialTheme {
         MineMainScreen(
-            uiState = MineUiState(
+            uiState = UserUiState(
                 featureRatings = mockRatings,
                 isFeaturesView = true,
                 isLoading = false
@@ -160,7 +159,7 @@ fun MineMainScreenFeaturesPreview() {
 fun MineMainScreenDetailActivePreview() {
     MaterialTheme {
         MineMainScreen(
-            uiState = MineUiState(
+            uiState = UserUiState(
                 selectedFeature = RatingItem(1, "UI Design", 8, 10),
                 isLoading = false
             ),

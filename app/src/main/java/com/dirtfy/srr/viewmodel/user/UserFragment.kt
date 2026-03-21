@@ -12,9 +12,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dirtfy.srr.view.mine.MineMainScreen
 import com.dirtfy.srr.view.theme.SRRTheme
 
-class MineFragment : Fragment() {
+class UserFragment : Fragment() {
 
-    private val viewModel: MineViewModel by viewModels()
+    private val viewModel: UserViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,

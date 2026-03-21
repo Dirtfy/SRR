@@ -8,7 +8,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentTransaction
 import androidx.fragment.app.commit
 import com.dirtfy.srr.viewmodel.login.LoginFragment
-import com.dirtfy.srr.viewmodel.user.MineFragment
+import com.dirtfy.srr.viewmodel.user.UserFragment
 
 class MainActivity : FragmentActivity() {
 
@@ -37,7 +37,7 @@ class MainActivity : FragmentActivity() {
      */
     fun navigateToMine() {
         // Switch from Login flow to the Mine/Main flow
-        navigateToFragment(MineFragment(), addToBackStack = false)
+        navigateToFragment(UserFragment(), addToBackStack = false)
     }
 
     fun logout() {

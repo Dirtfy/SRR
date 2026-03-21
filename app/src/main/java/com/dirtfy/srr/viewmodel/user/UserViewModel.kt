@@ -12,10 +12,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class MineViewModel : ViewModel() {
+class UserViewModel : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MineUiState())
-    val uiState: StateFlow<MineUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(UserUiState())
+    val uiState: StateFlow<UserUiState> = _uiState.asStateFlow()
 
     init {
         loadAllData()
