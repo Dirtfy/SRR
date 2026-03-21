@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dirtfy.srr.view.mine.features.Item as RatingItem
 import com.dirtfy.srr.view.mine.items.Item as GridItem
+import com.dirtfy.srr.view.mine.features.detail.Item as DetailSubItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +37,15 @@ class MineViewModel : ViewModel() {
                 selectedFeature = null
             )
         }
+    }
+
+    // Inside MineViewModel.kt
+    fun selectSubItem(subItem: DetailSubItem) {
+        _uiState.update { it.copy(selectedSubItem = subItem) }
+    }
+
+    fun dismissSubItemPopup() {
+        _uiState.update { it.copy(selectedSubItem = null) }
     }
 
     // --- Feature Popup Navigation ---

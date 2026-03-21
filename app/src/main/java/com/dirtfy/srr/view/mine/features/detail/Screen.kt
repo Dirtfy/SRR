@@ -1,6 +1,7 @@
 package com.dirtfy.srr.view.mine.features.detail
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,7 +22,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun FeatureDetailScreen(
     title: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onItemClick: (Item) -> Unit // New parameter for popup navigation
 ) {
     // Mock data internal to detail
     val items = listOf(
@@ -61,7 +63,10 @@ fun FeatureDetailScreen(
             }
 
             items(unratedItems) { item ->
-                SimpleFeedbackCard(item = item)
+                SimpleFeedbackCard(
+                    item = item,
+                    onClick = { onItemClick(item) }
+                )
             }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -71,7 +76,10 @@ fun FeatureDetailScreen(
             }
 
             items(ratedItems) { item ->
-                SimpleFeedbackCard(item = item)
+                SimpleFeedbackCard(
+                    item = item,
+                    onClick = { onItemClick(item) }
+                )
             }
         }
     }
@@ -84,6 +92,7 @@ fun SectionHeader(title: String, count: Int) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        @OptIn(ExperimentalMaterial3Api::class)
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -96,9 +105,14 @@ fun SectionHeader(title: String, count: Int) {
 }
 
 @Composable
-fun SimpleFeedbackCard(item: Item) {
+fun SimpleFeedbackCard(
+    item: Item,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }, // Clicking the card triggers the popup logic
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -132,6 +146,10 @@ fun SimpleFeedbackCard(item: Item) {
 @Composable
 fun FeedbackPreview() {
     MaterialTheme {
-        FeatureDetailScreen(title = "UI Performance", onBackClick = {})
+        FeatureDetailScreen(
+            title = "UI Performance",
+            onBackClick = {},
+            onItemClick = {}
+        )
     }
 }

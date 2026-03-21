@@ -26,12 +26,14 @@ class MineFragment : Fragment() {
                 SRRTheme {
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+                    // Inside MineFragment
                     MineMainScreen(
                         uiState = uiState,
                         onToggleView = { viewModel.toggleView() },
                         onItemClick = { item -> viewModel.selectItem(item) },
                         onFeatureClick = { feature -> viewModel.selectFeature(feature) },
-                        // Removed onDismissPopup because we are now using Detail Navigation
+                        onSubItemClick = { subItem -> viewModel.selectSubItem(subItem) }, // NEW
+                        onDismissSubPopup = { viewModel.dismissSubItemPopup() },         // NEW
                         onBackToGrid = { viewModel.clearSelection() }
                     )
                 }

@@ -1,5 +1,6 @@
 package com.dirtfy.srr.view.mine
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -11,10 +12,12 @@ import com.dirtfy.srr.view.mine.items.ItemGridScreen
 import com.dirtfy.srr.view.mine.features.FeatureListScreen
 import com.dirtfy.srr.view.mine.items.detail.ItemDetailScreen
 import com.dirtfy.srr.view.mine.features.detail.FeatureDetailScreen
+import com.dirtfy.srr.view.mine.features.detail.ItemDetailPopup
 import com.dirtfy.srr.viewmodel.user.MineUiState
 // Explicitly import Item classes for mock data in Previews
 import com.dirtfy.srr.view.mine.items.Item as GridItem
 import com.dirtfy.srr.view.mine.features.Item as RatingItem
+import com.dirtfy.srr.view.mine.features.detail.Item as DetailSubItem
 
 @Composable
 fun MineMainScreen(
@@ -22,27 +25,41 @@ fun MineMainScreen(
     onToggleView: () -> Unit,
     onItemClick: (com.dirtfy.srr.view.mine.items.Item) -> Unit,
     onFeatureClick: (com.dirtfy.srr.view.mine.features.Item) -> Unit,
+    onSubItemClick: (com.dirtfy.srr.view.mine.features.detail.Item) -> Unit,
+    onDismissSubPopup: () -> Unit,
     onBackToGrid: () -> Unit
 ) {
-    // Logic: Determine which screen to show
+    // 1. POPUP LOGIC: Shows on top of the FeatureDetailScreen
+    if (uiState.selectedSubItem != null) {
+        ItemDetailPopup(
+            title = uiState.selectedSubItem.title,
+            imageRes = uiState.selectedSubItem.imageRes,
+            onDismiss = onDismissSubPopup
+        )
+    }
+
+    // 2. NAVIGATION LOGIC
     when {
-        // 1. If an Item from the Grid is selected
+        // Full Screen Item Detail
         uiState.selectedItem != null -> {
+            BackHandler { onBackToGrid() }
             ItemDetailScreen(
                 title = uiState.selectedItem.title,
                 onBackClick = onBackToGrid
             )
         }
 
-        // 2. If a Feature from the Rating List is selected
+        // Full Screen Feature Detail
         uiState.selectedFeature != null -> {
+            BackHandler { onBackToGrid() }
             FeatureDetailScreen(
                 title = uiState.selectedFeature.name,
-                onBackClick = onBackToGrid
+                onBackClick = onBackToGrid,
+                onItemClick = onSubItemClick // When item inside this screen is clicked, trigger popup
             )
         }
 
-        // 3. Show the main lists (Default State)
+        // Main List View
         else -> {
             Surface(modifier = Modifier.fillMaxSize()) {
                 if (uiState.isLoading) {
@@ -106,6 +123,8 @@ fun MineMainScreenGridPreview() {
             onToggleView = {},
             onItemClick = {},
             onFeatureClick = {},
+            onSubItemClick = {},
+            onDismissSubPopup = {},
             onBackToGrid = {}
         )
     }
@@ -129,6 +148,8 @@ fun MineMainScreenFeaturesPreview() {
             onToggleView = {},
             onItemClick = {},
             onFeatureClick = {},
+            onSubItemClick = {},
+            onDismissSubPopup = {},
             onBackToGrid = {}
         )
     }
@@ -146,6 +167,8 @@ fun MineMainScreenDetailActivePreview() {
             onToggleView = {},
             onItemClick = {},
             onFeatureClick = {},
+            onSubItemClick = {},
+            onDismissSubPopup = {},
             onBackToGrid = {}
         )
     }
