@@ -104,43 +104,11 @@ fun MapScreen(
                     MapItemPopup(
                         item = item,
                         onDismiss = { selectedPoint = null },
-                        onViewDetail = {
-                            selectedPoint = null
-                            onItemClick(item) // Navigate to full detail screen
-                        }
                     )
                 }
             }
         }
     }
-}
-
-@Composable
-fun MapItemPopup(
-    item: Item,
-    onDismiss: () -> Unit,
-    onViewDetail: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = onViewDetail) {
-                Text("View Details")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-        },
-        title = { Text(item.title) },
-        text = {
-            Column {
-                Text("Primary Score: ${item.primaryScore}")
-                Text("Secondary Score: ${item.secondaryScore}")
-            }
-        }
-    )
 }
 
 @Composable

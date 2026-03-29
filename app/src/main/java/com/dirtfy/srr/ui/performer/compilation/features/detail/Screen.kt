@@ -26,8 +26,7 @@ import androidx.compose.ui.unit.dp
 fun CompilationDetailScreen(
     title: String,
     items: List<Item>,
-    onBackClick: () -> Unit,
-    onItemClick: (Item) -> Unit
+    onBackClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -54,8 +53,7 @@ fun CompilationDetailScreen(
             // Use the standard items extension function
             items(items) { item ->
                 CompilationItemRow(
-                    item = item,
-                    onClick = { onItemClick(item) }
+                    item = item
                 )
             }
         }
@@ -64,13 +62,11 @@ fun CompilationDetailScreen(
 
 @Composable
 fun CompilationItemRow(
-    item: Item,
-    onClick: () -> Unit
+    item: Item
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -132,8 +128,7 @@ fun CompilationDetailScreenPreview() {
         CompilationDetailScreen(
             title = "Compilation Detail",
             items = mockItems,
-            onBackClick = {},
-            onItemClick = {}
+            onBackClick = {}
         )
     }
 }
