@@ -2,12 +2,31 @@ package com.dirtfy.srr.ui.performer.compilation
 
 import android.R
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,8 +37,11 @@ import com.dirtfy.srr.ui.performer.compilation.features.CompilationFeaturesScree
 import com.dirtfy.srr.ui.performer.compilation.items.CompilationItemsGridScreen
 import com.dirtfy.srr.ui.performer.compilation.map.MapScreen
 import com.dirtfy.srr.ui.performer.compilation.features.Item as FeatureItem
+import com.dirtfy.srr.ui.performer.compilation.features.detail.CompilationDetailScreen as FeaturesDetailScreen
 import com.dirtfy.srr.ui.performer.compilation.items.Item as GridItem
+import com.dirtfy.srr.ui.performer.compilation.items.detail.CompilationDetailScreen as ItemsDetailScreen
 import com.dirtfy.srr.ui.performer.compilation.map.Item as MapItem
+import com.dirtfy.srr.ui.performer.compilation.map.MapItemPopup
 
 /**
  * COORDINATOR: This file manages the navigation logic between sub-views.
@@ -41,26 +63,26 @@ fun CompilationMainScreen(
             // 1. DETAIL VIEW MODES (Specific to each type)
             uiState.selectedGridItem != null -> {
                 BackHandler { onBackToMain() }
-                SpecializedDetailContent(
+                ItemsDetailScreen(
                     title = uiState.selectedGridItem.title,
-                    description = uiState.selectedGridItem.description,
-                    onBack = onBackToMain
+                    imageRes = uiState.selectedGridItem.imageRes,
+                    features = uiState.gridDetailItems,
+                    onBackClick = onBackToMain,
                 )
             }
             uiState.selectedFeatureItem != null -> {
                 BackHandler { onBackToMain() }
-                SpecializedDetailContent(
+                FeaturesDetailScreen (
                     title = uiState.selectedFeatureItem.name,
-                    description = "Score: ${uiState.selectedFeatureItem.totalCount}",
-                    onBack = onBackToMain
+                    items = uiState.featureDetailItems, // Passing the list as required by CompilationDetailScreen
+                    onBackClick = onBackToMain
                 )
             }
             uiState.selectedMapItem != null -> {
                 BackHandler { onBackToMain() }
-                SpecializedDetailContent(
-                    title = uiState.selectedMapItem.title,
-                    description = "Location: ${uiState.selectedMapItem.primaryScore}, ${uiState.selectedMapItem.secondaryScore}",
-                    onBack = onBackToMain
+                MapItemPopup(
+                    item = uiState.selectedMapItem,
+                    onDismiss = onBackToMain
                 )
             }
 
