@@ -8,7 +8,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dirtfy.srr.ui.performer.login.LoginScreen
-import com.dirtfy.srr.ui.performer.theme.SRRTheme
+import com.dirtfy.srr.ui.performer.base.theme.SRRTheme
 import com.dirtfy.srr.ui.window.MainActivity
 
 class LoginFragment : Fragment() {

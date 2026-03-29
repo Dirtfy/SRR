@@ -12,36 +12,42 @@ import com.dirtfy.srr.ui.window.component.UserFragment
 
 class MainActivity : FragmentActivity() {
 
-    // Use a fixed ID constant so the FragmentManager can find the container
-    // even after the screen rotates or the Activity is recreated.
-    private val containerId = 10001
+    /**
+     * This ID is used by BaseFragment to find the container to replace itself.
+     * We use a fixed integer so it remains consistent during configuration changes.
+     */
+    companion object {
+        const val CONTAINER_ID = 10001
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Setup the root container with the fixed ID
+        // Create the root container programmatically (No XML)
         val rootContainer = FrameLayout(this).apply {
-            id = containerId
+            id = CONTAINER_ID
         }
+
         setContentView(rootContainer)
 
-        // Initial navigation: Load Login screen
+        // Initial navigation: Load Login screen if first launch
         if (savedInstanceState == null) {
             navigateToFragment(LoginFragment(), addToBackStack = false)
         }
     }
 
     /**
-     * Public navigation methods called by Fragments
+     * Public navigation method to switch to the Main "My" flow
      */
     fun navigateToMine() {
-        // Switch from Login flow to the Mine/Main flow
         navigateToFragment(UserFragment(), addToBackStack = false)
     }
 
+    /**
+     * Public navigation method to return to Login
+     */
     fun logout() {
-        // Go back to login and clear the backstack
         navigateToFragment(LoginFragment(), addToBackStack = false)
     }
 
@@ -52,12 +58,10 @@ class MainActivity : FragmentActivity() {
         supportFragmentManager.commit {
             setReorderingAllowed(true)
 
-            // FIX: Use setTransition for standard Android animations.
-            // This avoids the 'Unresolved reference' error caused by
-            // trying to access internal library animation resources.
+            // Provides a standard fade/slide transition between screens
             setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
 
-            replace(containerId, fragment)
+            replace(CONTAINER_ID, fragment)
 
             if (addToBackStack) {
                 addToBackStack(null)

@@ -1,4 +1,4 @@
-package com.dirtfy.srr.ui.performer.theme
+package com.dirtfy.srr.ui.performer.base.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

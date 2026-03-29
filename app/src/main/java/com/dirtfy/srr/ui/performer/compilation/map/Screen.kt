@@ -23,13 +23,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun MapScreen(
     items: List<Item>,
-    availableFeatures: List<String>
+    availableFeatures: List<String>,
+    onItemClick: (Item) -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
     var featureX by remember { mutableStateOf(availableFeatures.getOrNull(0) ?: "") }
     var featureY by remember { mutableStateOf(availableFeatures.getOrNull(1) ?: "") }
+
+    // Local state to manage the visibility of the popup
     var selectedPoint by remember { mutableStateOf<Item?>(null) }
 
     ModalNavigationDrawer(
@@ -77,7 +80,9 @@ fun MapScreen(
                 if (featureX.isNotEmpty() && featureY.isNotEmpty()) {
                     ScatterPlot(
                         items = items,
-                        onPointClick = { selectedPoint = it }
+                        onPointClick = {
+                            selectedPoint = it // Show local popup
+                        }
                     )
 
                     Surface(
@@ -94,12 +99,48 @@ fun MapScreen(
                     }
                 }
 
+                // Show Popup when a point is selected
                 selectedPoint?.let { item ->
-                    MapItemPopup(item = item, onDismiss = { selectedPoint = null })
+                    MapItemPopup(
+                        item = item,
+                        onDismiss = { selectedPoint = null },
+                        onViewDetail = {
+                            selectedPoint = null
+                            onItemClick(item) // Navigate to full detail screen
+                        }
+                    )
                 }
             }
         }
     }
+}
+
+@Composable
+fun MapItemPopup(
+    item: Item,
+    onDismiss: () -> Unit,
+    onViewDetail: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onViewDetail) {
+                Text("View Details")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        },
+        title = { Text(item.title) },
+        text = {
+            Column {
+                Text("Primary Score: ${item.primaryScore}")
+                Text("Secondary Score: ${item.secondaryScore}")
+            }
+        }
+    )
 }
 
 @Composable
@@ -117,15 +158,14 @@ fun ScatterPlot(
             .pointerInput(items) {
                 detectTapGestures { offset ->
                     items.forEach { item ->
-                        val xVal = item.primaryScore.toFloat()
-                        val yVal = item.secondaryScore.toFloat()
+                        val xVal = item.primaryScore.toFloatOrNull() ?: 0f
+                        val yVal = item.secondaryScore.toFloatOrNull() ?: 0f
 
-                        // Map -1..1 to 0..size
                         val canvasX = ((xVal + 1f) / 2f) * size.width
                         val canvasY = size.height - (((yVal + 1f) / 2f) * size.height)
 
                         val distance = (Offset(canvasX, canvasY) - offset).getDistance()
-                        if (distance < 40f) onPointClick(item)
+                        if (distance < 50f) onPointClick(item)
                     }
                 }
             }
@@ -135,17 +175,13 @@ fun ScatterPlot(
         val centerX = width / 2f
         val centerY = height / 2f
 
-        // Draw X-Axis (Horizontal line through center)
         drawLine(axisColor, Offset(0f, centerY), Offset(width, centerY), strokeWidth = 1.dp.toPx())
-        // Draw Y-Axis (Vertical line through center)
         drawLine(axisColor, Offset(centerX, 0f), Offset(centerX, height), strokeWidth = 1.dp.toPx())
 
-        // Draw scatter dots
         items.forEach { item ->
-            val scoreX = item.primaryScore.toFloat()
-            val scoreY = item.secondaryScore.toFloat()
+            val scoreX = item.primaryScore.toFloatOrNull() ?: 0f
+            val scoreY = item.secondaryScore.toFloatOrNull() ?: 0f
 
-            // Normalize -1..1 to 0..1 then multiply by size
             val x = ((scoreX + 1f) / 2f) * width
             val y = height - (((scoreY + 1f) / 2f) * height)
 
@@ -162,40 +198,17 @@ fun ScatterPlot(
 @Composable
 fun MapScreenPreview() {
     val mockFeatures = listOf("Performance", "Stability", "UI Design")
-
-    // Removed 'id' parameter to match the Item data class definition
     val mockItems = listOf(
-        Item(
-            title = "High Performance",
-            imageRes = android.R.drawable.ic_menu_gallery,
-            primaryScore = "0.8",
-            secondaryScore = "0.5"
-        ),
-        Item(
-            title = "Low Stability",
-            imageRes = android.R.drawable.ic_menu_manage,
-            primaryScore = "-0.7",
-            secondaryScore = "-0.3"
-        ),
-        Item(
-            title = "Balanced",
-            imageRes = android.R.drawable.ic_menu_compass,
-            primaryScore = "0.0",
-            secondaryScore = "0.0"
-        ),
-        Item(
-            title = "Extreme Y",
-            imageRes = android.R.drawable.ic_menu_agenda,
-            primaryScore = "-0.2",
-            secondaryScore = "0.9"
-        )
+        Item("High Performance", android.R.drawable.ic_menu_gallery, "0.8", "0.5"),
+        Item("Low Stability", android.R.drawable.ic_menu_manage, "-0.7", "-0.3")
     )
 
     MaterialTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             MapScreen(
                 items = mockItems,
-                availableFeatures = mockFeatures
+                availableFeatures = mockFeatures,
+                onItemClick = {}
             )
         }
     }
