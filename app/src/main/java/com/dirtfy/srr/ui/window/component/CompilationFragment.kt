@@ -1,5 +1,6 @@
 package com.dirtfy.srr.ui.window.component
 
+import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -8,6 +9,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dirtfy.srr.ui.performer.compilation.CompilationMainScreen
 import com.dirtfy.srr.ui.performer.compilation.CompilationViewModel
 import com.dirtfy.srr.ui.performer.compilation.ViewMode
+import kotlinx.serialization.descriptors.StructureKind.MAP
 
 class CompilationFragment : BaseFragment() {
 
@@ -19,10 +21,13 @@ class CompilationFragment : BaseFragment() {
     override fun provideTitle(): String {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-        return when (uiState.viewMode) {
-            ViewMode.ITEMS -> "Compilation Items"
-            ViewMode.FEATURES -> "Feature Analysis"
-            ViewMode.MAP -> "Location Map"
+        return when {
+            uiState.selectedGridItem != null -> uiState.selectedGridItem!!.title
+            uiState.selectedFeatureItem != null -> uiState.selectedFeatureItem!!.name
+            uiState.viewMode == ViewMode.MAP -> "Feature Correlation Map"
+            uiState.viewMode == ViewMode.ITEMS -> "Items"
+            uiState.viewMode == ViewMode.FEATURES -> "Features"
+            else -> "My Dashboard"
         }
     }
 
@@ -41,8 +46,7 @@ class CompilationFragment : BaseFragment() {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         // Reactively show back button if any specialized selection is active
         return uiState.selectedGridItem != null ||
-                uiState.selectedFeatureItem != null ||
-                uiState.selectedMapItem != null
+                uiState.selectedFeatureItem != null
     }
 
     override fun onBackClick() {

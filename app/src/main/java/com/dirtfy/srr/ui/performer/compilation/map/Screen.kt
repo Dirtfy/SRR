@@ -4,8 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -17,95 +15,135 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
     items: List<Item>,
-    availableFeatures: List<String>,
-    onItemClick: (Item) -> Unit
+    availableFeatures: List<String>
 ) {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-
+    // State for selected features (Axes)
     var featureX by remember { mutableStateOf(availableFeatures.getOrNull(0) ?: "") }
     var featureY by remember { mutableStateOf(availableFeatures.getOrNull(1) ?: "") }
 
     // Local state to manage the visibility of the popup
     var selectedPoint by remember { mutableStateOf<Item?>(null) }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Spacer(Modifier.height(12.dp))
-                Text("Select Map Features", Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
-                HorizontalDivider()
+    Column(modifier = Modifier.fillMaxSize()) {
+        // --- Feature Selection Headers (Dropdowns) ---
+        Surface(
+            tonalElevation = 3.dp,
+            shadowElevation = 2.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FeatureDropdown(
+                    label = "X Axis",
+                    selectedFeature = featureX,
+                    options = availableFeatures,
+                    onFeatureSelected = { featureX = it },
+                    modifier = Modifier.weight(1f)
+                )
 
-                Text("X Axis Score", Modifier.padding(16.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                availableFeatures.forEach { feature ->
-                    NavigationDrawerItem(
-                        label = { Text(feature) },
-                        selected = feature == featureX,
-                        onClick = { featureX = feature }
-                    )
-                }
-
-                Spacer(Modifier.height(8.dp))
-                Text("Y Axis Score", Modifier.padding(16.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                availableFeatures.forEach { feature ->
-                    NavigationDrawerItem(
-                        label = { Text(feature) },
-                        selected = feature == featureY,
-                        onClick = { featureY = feature }
-                    )
-                }
-            }
-        }
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Feature Correlation Map") },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Open Drawer")
-                        }
-                    }
+                FeatureDropdown(
+                    label = "Y Axis",
+                    selectedFeature = featureY,
+                    options = availableFeatures,
+                    onFeatureSelected = { featureY = it },
+                    modifier = Modifier.weight(1f)
                 )
             }
-        ) { padding ->
-            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-                if (featureX.isNotEmpty() && featureY.isNotEmpty()) {
-                    ScatterPlot(
-                        items = items,
-                        onPointClick = {
-                            selectedPoint = it // Show local popup
-                        }
-                    )
+        }
 
-                    Surface(
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "Center is (0,0) | Range: -1 to 1",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
-                        )
+        // --- Map Content Area ---
+        Box(modifier = Modifier.weight(1f)) {
+            if (featureX.isNotEmpty() && featureY.isNotEmpty()) {
+                ScatterPlot(
+                    items = items,
+                    onPointClick = {
+                        selectedPoint = it
                     }
-                }
+                )
 
-                // Show Popup when a point is selected
-                selectedPoint?.let { item ->
-                    MapItemPopup(
-                        item = item,
-                        onDismiss = { selectedPoint = null },
+                // Info Overlay
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(24.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "$featureX vs $featureY",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold
                     )
                 }
+            } else {
+                Text(
+                    text = "Please select features for both axes",
+                    modifier = Modifier.align(Alignment.Center),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            // Popup when a point is selected
+            selectedPoint?.let { item ->
+                MapItemPopup(
+                    item = item,
+                    onDismiss = { selectedPoint = null },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FeatureDropdown(
+    label: String,
+    selectedFeature: String,
+    options: List<String>,
+    onFeatureSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selectedFeature,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onFeatureSelected(option)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                )
             }
         }
     }
@@ -165,7 +203,7 @@ fun ScatterPlot(
 @Preview(showBackground = true)
 @Composable
 fun MapScreenPreview() {
-    val mockFeatures = listOf("Performance", "Stability", "UI Design")
+    val mockFeatures = listOf("Performance", "Stability", "UI Design", "Security")
     val mockItems = listOf(
         Item("High Performance", android.R.drawable.ic_menu_gallery, "0.8", "0.5"),
         Item("Low Stability", android.R.drawable.ic_menu_manage, "-0.7", "-0.3")
@@ -175,8 +213,7 @@ fun MapScreenPreview() {
         Surface(color = MaterialTheme.colorScheme.background) {
             MapScreen(
                 items = mockItems,
-                availableFeatures = mockFeatures,
-                onItemClick = {}
+                availableFeatures = mockFeatures
             )
         }
     }

@@ -64,18 +64,14 @@ fun CompilationMainScreen(
             uiState.selectedGridItem != null -> {
                 BackHandler { onBackToMain() }
                 ItemsDetailScreen(
-                    title = uiState.selectedGridItem.title,
                     imageRes = uiState.selectedGridItem.imageRes,
-                    features = uiState.gridDetailItems,
-                    onBackClick = onBackToMain,
+                    features = uiState.gridDetailItems
                 )
             }
             uiState.selectedFeatureItem != null -> {
                 BackHandler { onBackToMain() }
                 FeaturesDetailScreen (
-                    title = uiState.selectedFeatureItem.name,
-                    items = uiState.featureDetailItems, // Passing the list as required by CompilationDetailScreen
-                    onBackClick = onBackToMain
+                    items = uiState.featureDetailItems
                 )
             }
             uiState.selectedMapItem != null -> {
@@ -147,8 +143,7 @@ fun CompilationMainScreen(
                             ViewMode.MAP -> {
                                 MapScreen(
                                     items = uiState.mapItems,
-                                    availableFeatures = uiState.availableFeatureList,
-                                    onItemClick = onMapItemClick
+                                    availableFeatures = uiState.availableFeatureList
                                 )
                             }
                         }

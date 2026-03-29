@@ -1,5 +1,6 @@
 package com.dirtfy.srr.ui.window.component
 
+import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier

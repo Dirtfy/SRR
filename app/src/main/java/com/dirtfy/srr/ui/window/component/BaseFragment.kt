@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
@@ -33,6 +34,9 @@ abstract class BaseFragment : Fragment() {
      */
     @Composable
     open fun shouldShowBackButton(): Boolean = false
+
+    @Composable
+    open fun shouldShowMenuButton(): Boolean = false
 
     /**
      * Logic for the Top Bar back arrow.
@@ -69,7 +73,9 @@ abstract class BaseFragment : Fragment() {
      * The main Compose content of the screen.
      */
     @Composable
-    abstract fun ScreenContent(modifier: androidx.compose.ui.Modifier)
+    abstract fun ScreenContent(
+        modifier: androidx.compose.ui.Modifier
+    )
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -81,6 +87,7 @@ abstract class BaseFragment : Fragment() {
                 SRRTheme {
                     val reactiveTitle = provideTitle()
                     val reactiveBack = shouldShowBackButton()
+                    val reactiveMenu = shouldShowMenuButton()
 
                     SRRBaseScreen(
                         title = reactiveTitle,

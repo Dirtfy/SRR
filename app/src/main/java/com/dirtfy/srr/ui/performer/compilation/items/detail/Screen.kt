@@ -22,64 +22,44 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompilationDetailScreen(
-    title: String,
     imageRes: Int,
-    features: List<Item>,
-    onBackClick: () -> Unit
+    features: List<Item>
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = title, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // 1. Big Image Header
+        item {
+            Image(
+                painter = painterResource(id = imageRes),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp)
+                    .padding(16.dp)
+                    .clip(MaterialTheme.shapes.medium)
             )
         }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // 1. Big Image Header
-            item {
-                Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(240.dp)
-                        .padding(16.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                )
-            }
 
-            // 2. Section Header
-            item {
-                Text(
-                    text = "Features",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    fontWeight = FontWeight.ExtraBold
-                )
-            }
+        // 2. Section Header
+        item {
+            Text(
+                text = "Features",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
 
-            // 3. List of Features
-            items(features) { feature ->
-                FeatureRow(item = feature)
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-            }
+        // 3. List of Features
+        items(features) { feature ->
+            FeatureRow(item = feature)
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
         }
     }
 }
@@ -127,11 +107,9 @@ fun CompilationDetailScreenPreview() {
 
     MaterialTheme {
         CompilationDetailScreen(
-            title = "Premium Feature Set",
             // Using a standard android resource for preview purposes
             imageRes = android.R.drawable.ic_menu_gallery,
-            features = mockFeatures,
-            onBackClick = {}
+            features = mockFeatures
         )
     }
 }

@@ -38,14 +38,12 @@ fun CompilationItemsNavigation() {
 
         // Navigate to the Detail Screen
         CompilationDetailScreen(
-            title = selectedItem!!.title,
             imageRes = selectedItem!!.imageRes,
             features = listOf(
                 DetailFeatureItem("Design Quality", "9.5"),
                 DetailFeatureItem("Performance", "8.8"),
                 DetailFeatureItem("User Experience", "9.2")
             ),
-            onBackClick = { selectedItem = null }
         )
     } else {
         // Show the Grid Screen

@@ -24,38 +24,18 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompilationDetailScreen(
-    title: String,
-    items: List<Item>,
-    onBackClick: () -> Unit
+    items: List<Item>
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = title) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Use the standard items extension function
+        items(items) { item ->
+            CompilationItemRow(
+                item = item
             )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Use the standard items extension function
-            items(items) { item ->
-                CompilationItemRow(
-                    item = item
-                )
-            }
         }
     }
 }
@@ -126,9 +106,7 @@ fun CompilationDetailScreenPreview() {
 
     MaterialTheme {
         CompilationDetailScreen(
-            title = "Compilation Detail",
-            items = mockItems,
-            onBackClick = {}
+            items = mockItems
         )
     }
 }
