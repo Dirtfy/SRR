@@ -8,7 +8,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 // Import conversion functions/models from sub-packages
 import com.dirtfy.srr.ui.performer.compilation.features.Item as FeatureItem
+import com.dirtfy.srr.ui.performer.compilation.features.detail.Item as FeatureDetailItem
 import com.dirtfy.srr.ui.performer.compilation.items.Item as GridItem
+import com.dirtfy.srr.ui.performer.compilation.items.detail.Item as GridDetailItem
 import com.dirtfy.srr.ui.performer.compilation.map.Item as MapItem
 
 class CompilationViewModel : ViewModel() {
@@ -28,10 +30,20 @@ class CompilationViewModel : ViewModel() {
             GridItem(1, "Cloud Storage", "Secure backup for your data", R.drawable.ic_menu_save)
         )
 
+        val mockGridDetailItems = listOf(
+            GridDetailItem("Premium Plan", "100"),
+            GridDetailItem("Cloud Storage", "15")
+        )
+
         val mockFeatures = listOf(
             FeatureItem(0, "User Interface", 10),
             FeatureItem(1, "Performance", 8),
             FeatureItem(2, "System Stability", 7)
+        )
+
+        val mockFeaturesDetailItems = listOf(
+            FeatureDetailItem(0, "Premium Plan", R.drawable.ic_menu_agenda, "100"),
+            FeatureDetailItem(1, "Cloud Storage", R.drawable.ic_menu_agenda, "15")
         )
 
         val mockMapItems = listOf(
@@ -49,7 +61,9 @@ class CompilationViewModel : ViewModel() {
         _uiState.update { state ->
             state.copy(
                 gridItems = mockGridItems,
+                gridDetailItems = mockGridDetailItems,
                 featureItems = mockFeatures,
+                featureDetailItems = mockFeaturesDetailItems,
                 mapItems = mockMapItems,
                 availableFeatureList = mockAvailableFeatureList,
                 isLoading = false
