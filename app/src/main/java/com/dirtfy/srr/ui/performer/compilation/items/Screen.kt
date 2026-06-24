@@ -19,8 +19,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.dirtfy.srr.ui.performer.compilation.items.detail.CompilationDetailScreen
-// Importing the Detail Screen and its Item type
-import com.dirtfy.srr.ui.performer.compilation.items.detail.CompilationDetailScreen
 import com.dirtfy.srr.ui.performer.compilation.items.detail.Item as DetailFeatureItem
 
 

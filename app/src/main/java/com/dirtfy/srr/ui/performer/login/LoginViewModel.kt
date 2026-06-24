@@ -3,7 +3,6 @@ package com.dirtfy.srr.ui.performer.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.dirtfy.srr.core.model.Evaluation
 import com.dirtfy.srr.core.repository.UserAccountRepository
 import com.dirtfy.srr.remote.repository.RemoteUserAccountRepository
 import kotlinx.coroutines.flow.MutableStateFlow
