@@ -1,21 +1,18 @@
 package com.dirtfy.srr.ui.performer.base
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.dirtfy.srr.ui.performer.base.theme.SRRTheme
-import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,6 +24,7 @@ fun SRRBaseScreen(
     navigationItems: List<Item>,
     currentRoute: String,
     onTabClick: (Item) -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (Modifier) -> Unit
 ) {
     Scaffold(
@@ -34,17 +32,16 @@ fun SRRBaseScreen(
             CenterAlignedTopAppBar(
                 title = { Text(text = title) },
                 navigationIcon = {
-                    when {
-                        showBackButton -> {
-                            IconButton(onClick = onBackClick) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back"
-                                )
-                            }
+                    if (showBackButton) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
                         }
                     }
-                }
+                },
+                actions = actions
             )
         },
         bottomBar = {

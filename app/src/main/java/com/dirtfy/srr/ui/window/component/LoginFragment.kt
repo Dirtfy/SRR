@@ -7,8 +7,9 @@ import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.dirtfy.srr.ui.performer.login.LoginScreen
 import com.dirtfy.srr.ui.performer.base.theme.SRRTheme
+import com.dirtfy.srr.ui.performer.login.LoginScreen
+import com.dirtfy.srr.ui.performer.login.LoginViewModel
 import com.dirtfy.srr.ui.window.MainActivity
 
 class LoginFragment : Fragment() {
@@ -19,9 +20,8 @@ class LoginFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 SRRTheme {
-                    // We pass the callback to the Activity to handle fragment switching
                     LoginScreen(
-                        viewModel = viewModel(),
+                        viewModel = viewModel(factory = LoginViewModel.factory()),
                         onLoginSuccess = {
                             (activity as? MainActivity)?.navigateToMine()
                         }

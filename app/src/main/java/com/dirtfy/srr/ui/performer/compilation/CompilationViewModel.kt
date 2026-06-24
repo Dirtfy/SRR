@@ -1,104 +1,111 @@
 package com.dirtfy.srr.ui.performer.compilation
 
-import android.R
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.dirtfy.srr.core.model.Feature
+import com.dirtfy.srr.core.model.Item
+import com.dirtfy.srr.core.scoring.DefaultFeatureScoringEngine
+import com.dirtfy.srr.core.usecase.LoadFeatureScoresUseCase
+import com.dirtfy.srr.remote.repository.RemoteEvaluationRepository
+import com.dirtfy.srr.remote.repository.RemoteFeatureRepository
+import com.dirtfy.srr.remote.repository.RemoteItemRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-// Import conversion functions/models from sub-packages
-import com.dirtfy.srr.ui.performer.compilation.features.Item as FeatureItem
-import com.dirtfy.srr.ui.performer.compilation.features.detail.Item as FeatureDetailItem
-import com.dirtfy.srr.ui.performer.compilation.items.Item as GridItem
-import com.dirtfy.srr.ui.performer.compilation.items.detail.Item as GridDetailItem
-import com.dirtfy.srr.ui.performer.compilation.map.Item as MapItem
+import kotlinx.coroutines.launch
 
-class CompilationViewModel : ViewModel() {
+class CompilationViewModel(
+    private val loadFeatureScoresUseCase: LoadFeatureScoresUseCase
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CompilationUiState())
+    private val _uiState = MutableStateFlow<CompilationUiState>(CompilationUiState.Loading)
     val uiState: StateFlow<CompilationUiState> = _uiState.asStateFlow()
 
     init {
-        loadData()
+        loadAllData()
     }
 
-    private fun loadData() {
-        _uiState.update { it.copy(isLoading = true) }
+    fun loadAllData() {
+        viewModelScope.launch {
+            _uiState.value = CompilationUiState.Loading
+            loadFeatureScoresUseCase.execute()
+                .onSuccess { output ->
+                    _uiState.value = CompilationUiState.Ready(
+                        items       = output.items,
+                        features    = output.features,
+                        scoreMatrix = output.scoreMatrix
+                    )
+                }
+                .onFailure { e -> _uiState.value = CompilationUiState.Error(e.message ?: "Failed to load") }
+        }
+    }
 
-        val mockGridItems = listOf(
-            GridItem(0, "Premium Plan", "Unlimited access to all features", R.drawable.ic_menu_agenda),
-            GridItem(1, "Cloud Storage", "Secure backup for your data", R.drawable.ic_menu_save)
-        )
+    fun onRetryTap() = loadAllData()
 
-        val mockGridDetailItems = listOf(
-            GridDetailItem("Premium Plan", "100"),
-            GridDetailItem("Cloud Storage", "15")
-        )
-
-        val mockFeatures = listOf(
-            FeatureItem(0, "User Interface", 10),
-            FeatureItem(1, "Performance", 8),
-            FeatureItem(2, "System Stability", 7)
-        )
-
-        val mockFeaturesDetailItems = listOf(
-            FeatureDetailItem(0, "Premium Plan", R.drawable.ic_menu_agenda, "100"),
-            FeatureDetailItem(1, "Cloud Storage", R.drawable.ic_menu_agenda, "15")
-        )
-
-        val mockMapItems = listOf(
-            MapItem("User Interface", R.drawable.ic_menu_agenda, "-0.5", "1"),
-            MapItem("Performance", R.drawable.ic_menu_agenda, "-0.3", "-0.4"),
-            MapItem("System Stability", R.drawable.ic_menu_agenda, "0.5", "0.5")
-        )
-
-        val mockAvailableFeatureList = listOf(
-            "Performance",
-            "Stability",
-            "UI Design"
-        )
-
-        _uiState.update { state ->
-            state.copy(
-                gridItems = mockGridItems,
-                gridDetailItems = mockGridDetailItems,
-                featureItems = mockFeatures,
-                featureDetailItems = mockFeaturesDetailItems,
-                mapItems = mockMapItems,
-                availableFeatureList = mockAvailableFeatureList,
-                isLoading = false
+    // Debator fix #5: clear selections when switching tabs
+    fun onTabSelected(tab: CompilationUiState.Tab) {
+        (_uiState.value as? CompilationUiState.Ready)?.let {
+            _uiState.value = it.copy(
+                activeTab       = tab,
+                selectedItem    = null,
+                selectedFeature = null,
+                mapPopupItem    = null
             )
         }
     }
 
-    fun setViewMode(mode: ViewMode) {
-        _uiState.update { it.copy(viewMode = mode) }
+    fun onItemSelected(item: Item) {
+        (_uiState.value as? CompilationUiState.Ready)?.let {
+            _uiState.value = it.copy(selectedItem = item)
+        }
     }
 
-    // --- Grid Item Selection ---
-    fun selectGridItem(item: GridItem) {
-        _uiState.update { it.copy(selectedGridItem = item) }
+    fun onFeatureSelected(feature: Feature) {
+        (_uiState.value as? CompilationUiState.Ready)?.let {
+            _uiState.value = it.copy(selectedFeature = feature)
+        }
     }
 
-    fun clearGridItem() {
-        _uiState.update { it.copy(selectedGridItem = null) }
+    fun onMapItemTap(item: Item) {
+        (_uiState.value as? CompilationUiState.Ready)?.let {
+            _uiState.value = it.copy(mapPopupItem = item)
+        }
     }
 
-    // --- Feature Item Selection ---
-    fun selectFeatureItem(item: FeatureItem) {
-        _uiState.update { it.copy(selectedFeatureItem = item) }
+    fun onMapXFeatureSelected(featureId: String) {
+        (_uiState.value as? CompilationUiState.Ready)?.let {
+            _uiState.value = it.copy(mapXFeatureId = featureId)
+        }
     }
 
-    fun clearFeatureItem() {
-        _uiState.update { it.copy(selectedFeatureItem = null) }
+    fun onMapYFeatureSelected(featureId: String) {
+        (_uiState.value as? CompilationUiState.Ready)?.let {
+            _uiState.value = it.copy(mapYFeatureId = featureId)
+        }
     }
 
-    // --- Map Item Selection ---
-    fun selectMapItem(item: MapItem) {
-        _uiState.update { it.copy(selectedMapItem = item) }
+    fun clearSelection() {
+        val state = _uiState.value as? CompilationUiState.Ready ?: return
+        _uiState.value = when {
+            state.mapPopupItem  != null -> state.copy(mapPopupItem = null)
+            state.selectedItem  != null -> state.copy(selectedItem = null)
+            else                        -> state.copy(selectedFeature = null)
+        }
     }
 
-    fun clearMapItem() {
-        _uiState.update { it.copy(selectedMapItem = null) }
+    companion object {
+        fun factory(): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                CompilationViewModel(
+                    loadFeatureScoresUseCase = LoadFeatureScoresUseCase(
+                        itemRepository       = RemoteItemRepository(),
+                        featureRepository    = RemoteFeatureRepository(),
+                        evaluationRepository = RemoteEvaluationRepository(),
+                        scoringEngine        = DefaultFeatureScoringEngine()
+                    )
+                ) as T
+        }
     }
 }

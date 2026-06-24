@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Any signed-in user can read items and features
+    match /items/{itemId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /features/{featureId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+
+      // A user can only read/write their own evaluation document
+      match /userEvaluations/{userId} {
+        allow read:  if request.auth != null;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

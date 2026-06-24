@@ -1,27 +1,25 @@
 package com.dirtfy.srr.ui.performer.compilation
 
-import com.dirtfy.srr.ui.performer.compilation.features.Item as FeatureItem
-import com.dirtfy.srr.ui.performer.compilation.features.detail.Item as FeatureDetailItem
-import com.dirtfy.srr.ui.performer.compilation.items.Item as GridItem
-import com.dirtfy.srr.ui.performer.compilation.items.detail.Item as GridDetailItem
-import com.dirtfy.srr.ui.performer.compilation.map.Item as MapItem
+import com.dirtfy.srr.core.model.Feature
+import com.dirtfy.srr.core.model.Item
+import com.dirtfy.srr.core.model.ScoreMatrix
 
-/**
- * UI State for the Compilation screen.
- * Contains specialized lists for each sub-view.
- */
-data class CompilationUiState(
-    // Specialized lists for the sub-screens
-    val gridItems: List<GridItem> = emptyList(),
-    val selectedGridItem: GridItem? = null,
-    val gridDetailItems: List<GridDetailItem> = emptyList(),
-    val featureItems: List<FeatureItem> = emptyList(),
-    val selectedFeatureItem: FeatureItem? = null,
-    val featureDetailItems: List<FeatureDetailItem> = emptyList(),
-    val mapItems: List<MapItem> = emptyList(),
-    val selectedMapItem: MapItem? = null,
-    val availableFeatureList: List<String> = emptyList(),
+sealed class CompilationUiState {
+    object Loading : CompilationUiState()
+    data class Error(val message: String) : CompilationUiState()
+    data class Ready(
+        // Item and Feature are core.model.Item / core.model.Feature — not UI models
+        val items: List<Item>,
+        val features: List<Feature>,
+        val scoreMatrix: ScoreMatrix,
+        val activeTab: Tab = Tab.ITEMS,
+        val selectedItem: Item? = null,
+        val selectedFeature: Feature? = null,
+        val mapPopupItem: Item? = null,
+        // Null means "use the list index default" (features[0]/features[1])
+        val mapXFeatureId: String? = null,
+        val mapYFeatureId: String? = null
+    ) : CompilationUiState()
 
-    val viewMode: ViewMode = ViewMode.ITEMS,
-    val isLoading: Boolean = false
-)
+    enum class Tab { ITEMS, FEATURES, MAP }
+}

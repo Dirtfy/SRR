@@ -1,191 +1,373 @@
 package com.dirtfy.srr.ui.performer.user
 
-import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.dirtfy.srr.ui.performer.user.features.FeatureListScreen
-import com.dirtfy.srr.ui.performer.user.features.detail.FeatureDetailScreen
-import com.dirtfy.srr.ui.performer.user.features.detail.ItemDetailPopup
-import com.dirtfy.srr.ui.performer.user.items.ItemGridScreen
-import com.dirtfy.srr.ui.performer.user.items.detail.ItemDetailScreen
-import com.dirtfy.srr.ui.performer.base.theme.SRRTheme
-// Explicitly import Item classes for mock data in Previews
-import com.dirtfy.srr.ui.performer.user.items.Item as GridItem
-import com.dirtfy.srr.ui.performer.user.features.Item as RatingItem
+import com.dirtfy.srr.core.model.Feature
+import com.dirtfy.srr.core.model.Item
+import com.dirtfy.srr.core.model.ScoreMatrix
+
+// ---------------------------------------------------------------------------
+// Top-level router
+// ---------------------------------------------------------------------------
 
 @Composable
-fun MineMainScreen(
-    modifier: Modifier = Modifier, // Injected by BaseFragment (Scaffold innerPadding)
+fun UserScreen(
+    modifier: Modifier = Modifier,
     uiState: UserUiState,
-    onToggleView: () -> Unit,
-    onItemClick: (GridItem) -> Unit,
-    onFeatureClick: (RatingItem) -> Unit,
-    onSubItemClick: (com.dirtfy.srr.ui.performer.user.features.detail.Item) -> Unit,
-    onDismissSubPopup: () -> Unit,
-    onBackToGrid: () -> Unit
+    onTabSelected: (UserUiState.Tab) -> Unit,
+    onItemSelected: (Item) -> Unit,
+    onFeatureSelected: (Feature) -> Unit,
+    onOpenEditor: (featureId: String) -> Unit,
+    onEvaluationReorder: (List<String>) -> Unit,
+    onSubmitEvaluation: () -> Unit,
+    onRetryTap: () -> Unit
 ) {
-    // State for the Dropdown Menu
-    var menuExpanded by remember { mutableStateOf(false) }
-
-    // 1. POPUP LOGIC: Shows on top of current view
-    if (uiState.selectedSubItem != null) {
-        ItemDetailPopup(
-            title = uiState.selectedSubItem.title,
-            imageRes = uiState.selectedSubItem.imageRes,
-            onDismiss = onDismissSubPopup
-        )
-    }
-
-    // 2. MAIN LAYOUT
     Box(modifier = modifier.fillMaxSize()) {
-        when {
-            uiState.selectedItem != null -> {
-                BackHandler { onBackToGrid() }
-                ItemDetailScreen(
-                    title = uiState.selectedItem.title,
-                    onBackClick = onBackToGrid
-                )
+        when (uiState) {
+            is UserUiState.Loading -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
-
-            uiState.selectedFeature != null -> {
-                BackHandler { onBackToGrid() }
-                FeatureDetailScreen(
-                    title = uiState.selectedFeature.name,
-                    onBackClick = onBackToGrid,
-                    onItemClick = onSubItemClick
-                )
-            }
-
-            uiState.isLoading -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            is UserUiState.Error -> {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(uiState.message, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = onRetryTap) { Text("Retry") }
                 }
             }
-
-            else -> {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = if (uiState.isFeaturesView) "Feature Ratings" else "Available Items",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        // DROP DOWN MENU IMPLEMENTATION
-                        Box {
-                            TextButton(onClick = { menuExpanded = true }) {
-                                Text(
-                                    text = "View Mode",
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = null
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = menuExpanded,
-                                onDismissRequest = { menuExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Available Items") },
-                                    onClick = {
-                                        if (uiState.isFeaturesView) onToggleView()
-                                        menuExpanded = false
-                                    },
-                                    leadingIcon = {
-                                        RadioButton(
-                                            selected = !uiState.isFeaturesView,
-                                            onClick = null
-                                        )
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Feature Ratings") },
-                                    onClick = {
-                                        if (!uiState.isFeaturesView) onToggleView()
-                                        menuExpanded = false
-                                    },
-                                    leadingIcon = {
-                                        RadioButton(
-                                            selected = uiState.isFeaturesView,
-                                            onClick = null
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                    if (uiState.isFeaturesView) {
-                        FeatureListScreen(
-                            ratings = uiState.featureRatings,
-                            onFeatureClick = onFeatureClick
-                        )
-                    } else {
-                        ItemGridScreen(
-                            items = uiState.items,
-                            onItemClick = onItemClick
-                        )
-                    }
-                }
+            is UserUiState.Ready -> {
+                UserReadyContent(
+                    state               = uiState,
+                    onTabSelected       = onTabSelected,
+                    onItemSelected      = onItemSelected,
+                    onFeatureSelected   = onFeatureSelected,
+                    onOpenEditor        = onOpenEditor,
+                    onEvaluationReorder = onEvaluationReorder,
+                    onSubmitEvaluation  = onSubmitEvaluation
+                )
             }
         }
     }
 }
 
-// --- PREVIEWS ---
+// ---------------------------------------------------------------------------
+// Ready state router
+// ---------------------------------------------------------------------------
 
-@Preview(showBackground = true, name = "Dashboard Grid View")
 @Composable
-fun MineMainScreenGridPreview() {
-    SRRTheme {
-        // Use a Surface to provide background color in preview
-        Surface(color = MaterialTheme.colorScheme.background) {
-            MineMainScreen(
-                uiState = UserUiState(
-                    items = listOf(GridItem("Premium Plan", android.R.drawable.ic_menu_agenda)),
-                    isFeaturesView = false,
-                    isLoading = false
-                ),
-                onToggleView = {}, onItemClick = {}, onFeatureClick = {},
-                onSubItemClick = {}, onDismissSubPopup = {}, onBackToGrid = {}
+private fun UserReadyContent(
+    state: UserUiState.Ready,
+    onTabSelected: (UserUiState.Tab) -> Unit,
+    onItemSelected: (Item) -> Unit,
+    onFeatureSelected: (Feature) -> Unit,
+    onOpenEditor: (featureId: String) -> Unit,
+    onEvaluationReorder: (List<String>) -> Unit,
+    onSubmitEvaluation: () -> Unit
+) {
+    when {
+        state.evaluationEditor != null -> {
+            EvaluationEditorSheet(
+                editor       = state.evaluationEditor,
+                items        = state.items,
+                onReorder    = onEvaluationReorder,
+                onSubmit     = onSubmitEvaluation
+            )
+        }
+        state.selectedFeature != null -> {
+            UserFeatureDetailContent(
+                feature   = state.selectedFeature,
+                items     = state.items,
+                matrix    = state.scoreMatrix,
+                onEvaluate = onOpenEditor
+            )
+        }
+        state.selectedItem != null -> {
+            UserItemDetailContent(
+                item     = state.selectedItem,
+                features = state.features,
+                matrix   = state.scoreMatrix
+            )
+        }
+        else -> {
+            UserTabContent(
+                state            = state,
+                onTabSelected    = onTabSelected,
+                onItemSelected   = onItemSelected,
+                onFeatureSelected = onFeatureSelected
             )
         }
     }
 }
 
-@Preview(showBackground = true, name = "Dashboard Features View")
+// ---------------------------------------------------------------------------
+// Tab selector + tab content
+// ---------------------------------------------------------------------------
+
 @Composable
-fun MineMainScreenFeaturesPreview() {
-    SRRTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            MineMainScreen(
-                uiState = UserUiState(
-                    featureRatings = listOf(RatingItem(1, "UI Design", 8, 10)),
-                    isFeaturesView = true,
-                    isLoading = false
-                ),
-                onToggleView = {}, onItemClick = {}, onFeatureClick = {},
-                onSubItemClick = {}, onDismissSubPopup = {}, onBackToGrid = {}
-            )
+private fun UserTabContent(
+    state: UserUiState.Ready,
+    onTabSelected: (UserUiState.Tab) -> Unit,
+    onItemSelected: (Item) -> Unit,
+    onFeatureSelected: (Feature) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = state.activeTab.ordinal) {
+            UserUiState.Tab.entries.forEach { tab ->
+                Tab(
+                    selected = state.activeTab == tab,
+                    onClick  = { onTabSelected(tab) },
+                    text     = { Text(tab.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                )
+            }
+        }
+
+        when (state.activeTab) {
+            UserUiState.Tab.ITEMS -> {
+                ItemsTabContent(items = state.items, onItemSelected = onItemSelected)
+            }
+            UserUiState.Tab.FEATURES -> {
+                FeaturesTabContent(
+                    features        = state.features,
+                    items           = state.items,
+                    matrix          = state.scoreMatrix,
+                    onFeatureSelected = onFeatureSelected
+                )
+            }
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Items tab
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun ItemsTabContent(items: List<Item>, onItemSelected: (Item) -> Unit) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(items, key = { it.id }) { item ->
+            ListItem(
+                headlineContent = { Text(item.name) },
+                modifier = Modifier.clickableItem { onItemSelected(item) }
+            )
+            HorizontalDivider()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Features tab
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun FeaturesTabContent(
+    features: List<Feature>,
+    items: List<Item>,
+    matrix: ScoreMatrix,
+    onFeatureSelected: (Feature) -> Unit
+) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(features, key = { it.id }) { feature ->
+            val ratedCount = items.count { item ->
+                matrix.scores[item.id]?.get(feature.id) != null
+            }
+            ListItem(
+                headlineContent = { Text(feature.name) },
+                trailingContent = { Text("$ratedCount/${items.size}") },
+                modifier = Modifier.clickableItem { onFeatureSelected(feature) }
+            )
+            HorizontalDivider()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Item detail (scores per feature)
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun UserItemDetailContent(
+    item: Item,
+    features: List<Feature>,
+    matrix: ScoreMatrix
+) {
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+        item {
+            Text(item.name, style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(16.dp))
+            Text("Feature Scores", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+        }
+        items(features, key = { it.id }) { feature ->
+            val rawScore = matrix.scores[item.id]?.get(feature.id)
+            val displayScore = if (rawScore != null) "%.1f".format(rawScore) else "—"
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(feature.name, modifier = Modifier.weight(1f))
+                Text(displayScore, style = MaterialTheme.typography.bodyMedium)
+            }
+            HorizontalDivider()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Feature detail (items ordered by score + Evaluate button)
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun UserFeatureDetailContent(
+    feature: Feature,
+    items: List<Item>,
+    matrix: ScoreMatrix,
+    onEvaluate: (featureId: String) -> Unit
+) {
+    val sortedItems = items.sortedWith(
+        compareByDescending { matrix.scores[it.id]?.get(feature.id) }
+    )
+
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+        item {
+            Text(feature.name, style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick  = { onEvaluate(feature.id) },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Evaluate") }
+            Spacer(Modifier.height(16.dp))
+            Text("Item Rankings", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+        }
+        items(sortedItems, key = { it.id }) { item ->
+            val rawScore = matrix.scores[item.id]?.get(feature.id)
+            val displayScore = if (rawScore != null) "%.1f".format(rawScore) else "—"
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(item.name, modifier = Modifier.weight(1f))
+                Text(displayScore, style = MaterialTheme.typography.bodyMedium)
+            }
+            HorizontalDivider()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Evaluation editor (drag-reorder via up/down buttons)
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun EvaluationEditorSheet(
+    editor: UserUiState.Ready.EvaluationEditorState,
+    items: List<Item>,
+    onReorder: (List<String>) -> Unit,
+    onSubmit: () -> Unit
+) {
+    val nameById = remember(items) { items.associate { it.id to it.name } }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Rank items strongest → weakest", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text  = "Drag or use arrows to reorder",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(12.dp))
+
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            itemsIndexed(editor.orderedItemIds, key = { _, id -> id }) { index, itemId ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text     = "${index + 1}.",
+                        modifier = Modifier.width(32.dp),
+                        style    = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text     = nameById[itemId] ?: itemId,
+                        modifier = Modifier.weight(1f),
+                        style    = MaterialTheme.typography.bodyLarge
+                    )
+                    Column {
+                        IconButton(
+                            onClick  = {
+                                if (index > 0) {
+                                    val newOrder = editor.orderedItemIds.toMutableList()
+                                    newOrder.add(index - 1, newOrder.removeAt(index))
+                                    onReorder(newOrder)
+                                }
+                            },
+                            enabled = index > 0
+                        ) { Icon(Icons.Default.KeyboardArrowUp, "Move up") }
+
+                        IconButton(
+                            onClick  = {
+                                if (index < editor.orderedItemIds.lastIndex) {
+                                    val newOrder = editor.orderedItemIds.toMutableList()
+                                    newOrder.add(index + 1, newOrder.removeAt(index))
+                                    onReorder(newOrder)
+                                }
+                            },
+                            enabled = index < editor.orderedItemIds.lastIndex
+                        ) { Icon(Icons.Default.KeyboardArrowDown, "Move down") }
+                    }
+                }
+                HorizontalDivider()
+            }
+        }
+
+        editor.saveError?.let { err ->
+            Text(
+                text  = err,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        Button(
+            onClick  = onSubmit,
+            enabled  = !editor.isSaving,
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+        ) {
+            if (editor.isSaving) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else {
+                Text("Submit")
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Helper extension
+// ---------------------------------------------------------------------------
+
+private fun Modifier.clickableItem(onClick: () -> Unit): Modifier =
+    this.clickable(onClick = onClick)

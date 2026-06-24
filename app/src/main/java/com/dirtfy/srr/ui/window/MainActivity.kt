@@ -9,13 +9,11 @@ import androidx.fragment.app.FragmentTransaction
 import androidx.fragment.app.commit
 import com.dirtfy.srr.ui.window.component.LoginFragment
 import com.dirtfy.srr.ui.window.component.UserFragment
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.auth.ktx.auth
 
 class MainActivity : FragmentActivity() {
 
-    /**
-     * This ID is used by BaseFragment to find the container to replace itself.
-     * We use a fixed integer so it remains consistent during configuration changes.
-     */
     companion object {
         const val CONTAINER_ID = 10001
     }
@@ -24,48 +22,36 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Create the root container programmatically (No XML)
         val rootContainer = FrameLayout(this).apply {
             id = CONTAINER_ID
         }
 
         setContentView(rootContainer)
 
-        // Initial navigation: Load Login screen if first launch
         if (savedInstanceState == null) {
             navigateToFragment(LoginFragment(), addToBackStack = false)
         }
     }
 
-    /**
-     * Public navigation method to switch to the Main "My" flow
-     */
     fun navigateToMine() {
         navigateToFragment(UserFragment(), addToBackStack = false)
     }
 
-    /**
-     * Public navigation method to return to Login
-     */
     fun logout() {
         navigateToFragment(LoginFragment(), addToBackStack = false)
     }
 
-    /**
-     * Core Fragment Controller Logic
-     */
+    fun signOut() {
+        Firebase.auth.signOut()
+        logout()
+    }
+
     private fun navigateToFragment(fragment: Fragment, addToBackStack: Boolean = true) {
         supportFragmentManager.commit {
             setReorderingAllowed(true)
-
-            // Provides a standard fade/slide transition between screens
             setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
-
             replace(CONTAINER_ID, fragment)
-
-            if (addToBackStack) {
-                addToBackStack(null)
-            }
+            if (addToBackStack) addToBackStack(null)
         }
     }
 }
