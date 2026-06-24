@@ -39,6 +39,10 @@ android {
     }
 }
 
+tasks.register("testClasses") {
+    dependsOn("compileDebugUnitTestSources")
+}
+
 dependencies {
 
     implementation(libs.androidx.core.ktx)

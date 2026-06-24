@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -73,7 +73,7 @@ fun SRRBaseScreen(
 fun SRRBaseScreenPreview() {
     val mockTabs = listOf(
         Item("my", "My", Icons.Default.Person),
-        Item("result", "Result", Icons.Default.List)
+        Item("result", "Result", Icons.AutoMirrored.Filled.List)
     )
 
     SRRTheme {

@@ -5,7 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.Composable
@@ -95,7 +95,7 @@ abstract class BaseFragment : Fragment() {
                         onBackClick = { onBackClick() },
                         navigationItems = listOf(
                             Item("my", "My", Icons.Default.Person),
-                            Item("result", "Result", Icons.Default.List)
+                            Item("result", "Result", Icons.AutoMirrored.Filled.List)
                         ),
                         currentRoute = currentRoute,
                         onTabClick = { selectedItem ->
