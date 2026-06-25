@@ -14,21 +14,34 @@ class DefaultFeatureScoringEngineTest {
         Evaluation(userId, featureId, ids.toList())
 
     @Test
-    fun `empty evaluations produce null scores and zero vote counts`() {
+    fun `empty evaluations produce null scores and zero vote counts for every item x feature`() {
         val matrix = engine.computeScores(items, features, emptyMap(), minVoteThreshold = 3)
         for (itemId in items) {
+            assertTrue("scores missing item $itemId", matrix.scores.containsKey(itemId))
+            assertTrue("voteCounts missing item $itemId", matrix.voteCounts.containsKey(itemId))
             for (featureId in features) {
-                assertNull(matrix.scores[itemId]?.get(featureId))
-                assertEquals(0, matrix.voteCounts[itemId]?.get(featureId))
+                assertTrue(
+                    "scores[$itemId] missing feature $featureId",
+                    matrix.scores[itemId]!!.containsKey(featureId)
+                )
+                assertNull(matrix.scores[itemId]!![featureId])
+                assertTrue(
+                    "voteCounts[$itemId] missing feature $featureId",
+                    matrix.voteCounts[itemId]!!.containsKey(featureId)
+                )
+                assertEquals(0, matrix.voteCounts[itemId]!![featureId])
             }
         }
     }
 
     @Test
-    fun `three identical evaluations produce correct display scores`() {
-        val evals = mapOf("f1" to List(3) { eval("u$it", "f1", "A", "B", "C") })
+    fun `three identical evaluations produce A=10 B=5 C=0 display scores`() {
+        val evals = mapOf("f1" to listOf(
+            eval("u1", "f1", "A", "B", "C"),
+            eval("u2", "f1", "A", "B", "C"),
+            eval("u3", "f1", "A", "B", "C")
+        ))
         val matrix = engine.computeScores(items, listOf("f1"), evals, minVoteThreshold = 3)
-        // A=+1 → remap → 10.0, B=0 → 5.0, C=-1 → 0.0
         assertEquals(10.0, matrix.scores["A"]!!["f1"]!!, 0.001)
         assertEquals(5.0,  matrix.scores["B"]!!["f1"]!!, 0.001)
         assertEquals(0.0,  matrix.scores["C"]!!["f1"]!!, 0.001)
@@ -41,45 +54,51 @@ class DefaultFeatureScoringEngineTest {
             eval("u2", "f1", "A", "B", "C")
         ))
         val matrix = engine.computeScores(items, listOf("f1"), evals, minVoteThreshold = 3)
-        // Scores null (below threshold)
         assertNull(matrix.scores["A"]!!["f1"])
         assertNull(matrix.scores["B"]!!["f1"])
         assertNull(matrix.scores["C"]!!["f1"])
-        // But vote counts reflect 2 evaluations
         assertEquals(2, matrix.voteCounts["A"]!!["f1"])
         assertEquals(2, matrix.voteCounts["B"]!!["f1"])
         assertEquals(2, matrix.voteCounts["C"]!!["f1"])
     }
 
     @Test
-    fun `two features are computed independently`() {
+    fun `two features are scored independently`() {
         val evals = mapOf(
-            "f1" to List(3) { eval("u$it", "f1", "A", "B", "C") },
-            "f2" to List(3) { eval("u$it", "f2", "C", "B", "A") }
+            "f1" to listOf(eval("u1", "f1", "A", "B", "C"), eval("u2", "f1", "A", "B", "C"), eval("u3", "f1", "A", "B", "C")),
+            "f2" to listOf(eval("u1", "f2", "C", "B", "A"), eval("u2", "f2", "C", "B", "A"), eval("u3", "f2", "C", "B", "A"))
         )
         val matrix = engine.computeScores(items, listOf("f1", "f2"), evals, minVoteThreshold = 3)
-        // f1: A=10, C=0
+        // f1: A wins → 10, C loses → 0
         assertEquals(10.0, matrix.scores["A"]!!["f1"]!!, 0.001)
         assertEquals(0.0,  matrix.scores["C"]!!["f1"]!!, 0.001)
-        // f2: C=10, A=0 (reversed)
+        // f2: C wins → 10, A loses → 0 (reversed)
         assertEquals(10.0, matrix.scores["C"]!!["f2"]!!, 0.001)
         assertEquals(0.0,  matrix.scores["A"]!!["f2"]!!, 0.001)
     }
 
     @Test
     fun `voteCount counts only users who included the item in their evaluation`() {
-        // u1 evaluates [A, C] for f1; u2 evaluates [A, B, C]; u3 evaluates [A, B, C]
         val evals = mapOf("f1" to listOf(
-            eval("u1", "f1", "A", "C"),
+            eval("u1", "f1", "A", "C"),       // B not evaluated by u1
             eval("u2", "f1", "A", "B", "C"),
             eval("u3", "f1", "A", "B", "C")
         ))
         val matrix = engine.computeScores(items, listOf("f1"), evals, minVoteThreshold = 3)
-        // A: all 3 users evaluated it
         assertEquals(3, matrix.voteCounts["A"]!!["f1"])
-        // B: only u2 and u3 evaluated it
-        assertEquals(2, matrix.voteCounts["B"]!!["f1"])
-        // C: all 3 users evaluated it
+        assertEquals(2, matrix.voteCounts["B"]!!["f1"])  // u1 did not include B
         assertEquals(3, matrix.voteCounts["C"]!!["f1"])
+    }
+
+    @Test
+    fun `evaluations for feature not in allFeatureIds are silently ignored`() {
+        val evals = mapOf(
+            "f1" to listOf(eval("u1", "f1", "A", "B", "C"), eval("u2", "f1", "A", "B", "C"), eval("u3", "f1", "A", "B", "C")),
+            "f_unknown" to listOf(eval("u1", "f_unknown", "A"))
+        )
+        // f_unknown not in allFeatureIds
+        val matrix = engine.computeScores(items, listOf("f1"), evals, minVoteThreshold = 3)
+        assertFalse("f_unknown should not appear in scores", matrix.scores["A"]!!.containsKey("f_unknown"))
+        assertFalse("f_unknown should not appear in voteCounts", matrix.voteCounts["A"]!!.containsKey("f_unknown"))
     }
 }

@@ -24,5 +24,11 @@ class ScoreRemapperTest {
     fun `remapOrNull of null returns null`() = assertNull(ScoreRemapper.remapOrNull(null))
 
     @Test
-    fun `remapOrNull of minus one returns 0`() = assertEquals(0.0, ScoreRemapper.remapOrNull(-1.0)!!, 0.0)
+    fun `remapOrNull of minus one returns 0`() = assertEquals(0.0,  ScoreRemapper.remapOrNull(-1.0)!!, 0.0)
+
+    @Test
+    fun `remapOrNull of plus one returns 10`() = assertEquals(10.0, ScoreRemapper.remapOrNull(+1.0)!!, 0.0)
+
+    @Test
+    fun `remapOrNull of zero returns 5`() = assertEquals(5.0,  ScoreRemapper.remapOrNull(0.0)!!, 0.0)
 }

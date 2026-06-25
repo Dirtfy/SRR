@@ -23,7 +23,7 @@ object ScoreAggregator {
         }
 
         return collectedScores.mapValues { (_, scores) ->
-            if (scores.size < minVotes) null else scores.average()
+            if (scores.isEmpty() || scores.size < minVotes) null else scores.average()
         }
     }
 }

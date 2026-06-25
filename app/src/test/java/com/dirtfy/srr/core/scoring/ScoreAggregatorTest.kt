@@ -7,7 +7,7 @@ import org.junit.Test
 class ScoreAggregatorTest {
 
     private val allItems = listOf("A", "B", "C")
-    private fun eval(vararg ids: String) = Evaluation("u", "f", ids.toList())
+    private fun eval(userId: String, vararg ids: String) = Evaluation(userId, "f", ids.toList())
 
     @Test
     fun `zero evaluations returns null for all items`() {
@@ -16,15 +16,24 @@ class ScoreAggregatorTest {
     }
 
     @Test
-    fun `two evaluations below threshold returns null for all items`() {
-        val evals = listOf(eval("A", "B", "C"), eval("A", "B", "C"))
+    fun `one below minVotes returns null for all items`() {
+        val evals = listOf(eval("u1", "A", "B", "C"), eval("u2", "A", "B", "C"))
         val result = ScoreAggregator.aggregate(evals, allItems, minVotes = 3)
         assertTrue(result.values.all { it == null })
     }
 
     @Test
-    fun `three identical evaluations produce correct averages`() {
-        val evals = List(3) { eval("A", "B", "C") }
+    fun `exactly minVotes evaluations meets threshold and returns non-null scores`() {
+        val evals = listOf(eval("u1", "A", "B", "C"), eval("u2", "A", "B", "C"), eval("u3", "A", "B", "C"))
+        val result = ScoreAggregator.aggregate(evals, allItems, minVotes = 3)
+        assertNotNull(result["A"])
+        assertNotNull(result["B"])
+        assertNotNull(result["C"])
+    }
+
+    @Test
+    fun `three identical evaluations produce A=+1 B=0 C=-1 averages`() {
+        val evals = listOf(eval("u1", "A", "B", "C"), eval("u2", "A", "B", "C"), eval("u3", "A", "B", "C"))
         val result = ScoreAggregator.aggregate(evals, allItems, minVotes = 3)
         assertEquals(+1.0, result["A"]!!, 0.001)
         assertEquals( 0.0, result["B"]!!, 0.001)
@@ -34,7 +43,7 @@ class ScoreAggregatorTest {
     @Test
     fun `mixed evaluations average correctly`() {
         // User1=[A,B,C], User2=[C,B,A], User3=[A,B,C]
-        val evals = listOf(eval("A", "B", "C"), eval("C", "B", "A"), eval("A", "B", "C"))
+        val evals = listOf(eval("u1", "A", "B", "C"), eval("u2", "C", "B", "A"), eval("u3", "A", "B", "C"))
         val result = ScoreAggregator.aggregate(evals, allItems, minVotes = 3)
         // A: (1 + -1 + 1) / 3 = 1/3
         assertEquals(1.0 / 3.0,  result["A"]!!, 0.001)
@@ -46,20 +55,24 @@ class ScoreAggregatorTest {
 
     @Test
     fun `item in allItemIds absent from all evaluations returns null`() {
-        val evals = List(3) { eval("A", "B") }   // "C" never appears
+        val evals = listOf(eval("u1", "A", "B"), eval("u2", "A", "B"), eval("u3", "A", "B"))
         val result = ScoreAggregator.aggregate(evals, listOf("A", "B", "C"), minVotes = 3)
         assertNull(result["C"])
     }
 
     @Test
     fun `user evaluating only subset contributes vote only to evaluated items`() {
-        // Only A and C evaluated — B should accumulate zero votes
-        val evals = List(3) { eval("A", "C") }
+        val evals = listOf(eval("u1", "A", "C"), eval("u2", "A", "C"), eval("u3", "A", "C"))
         val result = ScoreAggregator.aggregate(evals, listOf("A", "B", "C"), minVotes = 3)
-        // A and C have 3 votes → should have scores
         assertNotNull(result["A"])
         assertNotNull(result["C"])
-        // B has 0 votes → null (below threshold 3)
-        assertNull(result["B"])
+        assertNull(result["B"])  // B has 0 votes — below threshold
+    }
+
+    @Test
+    fun `minVotes zero with no evaluations does not produce NaN`() {
+        val result = ScoreAggregator.aggregate(emptyList(), listOf("A"), minVotes = 0)
+        val score = result["A"]
+        if (score != null) assertFalse("Expected null or finite, got NaN", score.isNaN())
     }
 }
