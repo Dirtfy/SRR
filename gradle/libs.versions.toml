@@ -15,6 +15,7 @@ navigationCompose = "2.8.5"
 firebase-bom    = "33.1.0"
 google-services = "4.4.2"
 reorderable     = "2.4.0"
+firebaseFirestore = "26.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -41,6 +42,7 @@ firebase-bom           = { module = "com.google.firebase:firebase-bom",         
 firebase-auth-ktx      = { module = "com.google.firebase:firebase-auth-ktx" }
 firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx" }
 reorderable            = { module = "sh.calvin.reorderable:reorderable",             version.ref = "reorderable" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
