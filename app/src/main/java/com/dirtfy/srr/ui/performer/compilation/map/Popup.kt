@@ -15,11 +15,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
-
-
 @Composable
 fun MapItemPopup(
     item: Item,
+    xLabel: String,
+    yLabel: String,
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -35,7 +35,6 @@ fun MapItemPopup(
                 modifier = Modifier.padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header Title
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.headlineSmall,
@@ -45,7 +44,6 @@ fun MapItemPopup(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Big Image
                 Image(
                     painter = painterResource(id = item.imageRes),
                     contentDescription = null,
@@ -58,18 +56,16 @@ fun MapItemPopup(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Scores Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    ScoreBadge(label = "Safety", score = item.primaryScore)
-                    ScoreBadge(label = "Comfort", score = item.secondaryScore)
+                    ScoreBadge(label = xLabel, score = item.primaryScore)
+                    ScoreBadge(label = yLabel, score = item.secondaryScore)
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Close Button
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
@@ -104,17 +100,13 @@ private fun ScoreBadge(label: String, score: String) {
 fun MapItemPopupPreview() {
     val mockItem = Item(
         title = "Central Park Zone",
-        imageRes = android.R.drawable.ic_menu_gallery, // Placeholder
+        imageRes = android.R.drawable.ic_menu_gallery,
         primaryScore = "9.8",
         secondaryScore = "8.5"
     )
-
     MaterialTheme {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            MapItemPopup(
-                item = mockItem,
-                onDismiss = {}
-            )
+            MapItemPopup(item = mockItem, xLabel = "Durability", yLabel = "Portability", onDismiss = {})
         }
     }
 }

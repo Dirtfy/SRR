@@ -7,8 +7,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -21,21 +19,16 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun MapScreen(
     items: List<Item>,
-    availableFeatures: List<String>
+    availableFeatures: List<String>,
+    featureX: String,
+    featureY: String,
+    onFeatureXSelected: (String) -> Unit,
+    onFeatureYSelected: (String) -> Unit
 ) {
-    // State for selected features (Axes)
-    var featureX by remember { mutableStateOf(availableFeatures.getOrNull(0) ?: "") }
-    var featureY by remember { mutableStateOf(availableFeatures.getOrNull(1) ?: "") }
-
-    // Local state to manage the visibility of the popup
     var selectedPoint by remember { mutableStateOf<Item?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // --- Feature Selection Headers (Dropdowns) ---
-        Surface(
-            tonalElevation = 3.dp,
-            shadowElevation = 2.dp
-        ) {
+        Surface(tonalElevation = 3.dp, shadowElevation = 2.dp) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -46,31 +39,23 @@ fun MapScreen(
                     label = "X Axis",
                     selectedFeature = featureX,
                     options = availableFeatures,
-                    onFeatureSelected = { featureX = it },
+                    onFeatureSelected = onFeatureXSelected,
                     modifier = Modifier.weight(1f)
                 )
-
                 FeatureDropdown(
                     label = "Y Axis",
                     selectedFeature = featureY,
                     options = availableFeatures,
-                    onFeatureSelected = { featureY = it },
+                    onFeatureSelected = onFeatureYSelected,
                     modifier = Modifier.weight(1f)
                 )
             }
         }
 
-        // --- Map Content Area ---
         Box(modifier = Modifier.weight(1f)) {
             if (featureX.isNotEmpty() && featureY.isNotEmpty()) {
-                ScatterPlot(
-                    items = items,
-                    onPointClick = {
-                        selectedPoint = it
-                    }
-                )
+                ScatterPlot(items = items, onPointClick = { selectedPoint = it })
 
-                // Info Overlay
                 Surface(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -93,11 +78,12 @@ fun MapScreen(
                 )
             }
 
-            // Popup when a point is selected
             selectedPoint?.let { item ->
                 MapItemPopup(
                     item = item,
-                    onDismiss = { selectedPoint = null },
+                    xLabel = featureX,
+                    yLabel = featureY,
+                    onDismiss = { selectedPoint = null }
                 )
             }
         }
@@ -131,18 +117,11 @@ fun FeatureDropdown(
                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true)
                 .fillMaxWidth()
         )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option) },
-                    onClick = {
-                        onFeatureSelected(option)
-                        expanded = false
-                    },
+                    onClick = { onFeatureSelected(option); expanded = false },
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
             }
@@ -151,12 +130,9 @@ fun FeatureDropdown(
 }
 
 @Composable
-fun ScatterPlot(
-    items: List<Item>,
-    onPointClick: (Item) -> Unit
-) {
+fun ScatterPlot(items: List<Item>, onPointClick: (Item) -> Unit) {
     val pointColor = MaterialTheme.colorScheme.primary
-    val axisColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    val axisColor  = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
 
     Canvas(
         modifier = Modifier
@@ -167,36 +143,22 @@ fun ScatterPlot(
                     items.forEach { item ->
                         val xVal = item.primaryScore.toFloatOrNull() ?: 0f
                         val yVal = item.secondaryScore.toFloatOrNull() ?: 0f
-
                         val canvasX = ((xVal + 1f) / 2f) * size.width
                         val canvasY = size.height - (((yVal + 1f) / 2f) * size.height)
-
-                        val distance = (Offset(canvasX, canvasY) - offset).getDistance()
-                        if (distance < 50f) onPointClick(item)
+                        if ((Offset(canvasX, canvasY) - offset).getDistance() < 50f) onPointClick(item)
                     }
                 }
             }
     ) {
-        val width = size.width
-        val height = size.height
-        val centerX = width / 2f
-        val centerY = height / 2f
-
-        drawLine(axisColor, Offset(0f, centerY), Offset(width, centerY), strokeWidth = 1.dp.toPx())
-        drawLine(axisColor, Offset(centerX, 0f), Offset(centerX, height), strokeWidth = 1.dp.toPx())
+        val centerX = size.width / 2f
+        val centerY = size.height / 2f
+        drawLine(axisColor, Offset(0f, centerY), Offset(size.width, centerY), strokeWidth = 1.dp.toPx())
+        drawLine(axisColor, Offset(centerX, 0f), Offset(centerX, size.height), strokeWidth = 1.dp.toPx())
 
         items.forEach { item ->
-            val scoreX = item.primaryScore.toFloatOrNull() ?: 0f
-            val scoreY = item.secondaryScore.toFloatOrNull() ?: 0f
-
-            val x = ((scoreX + 1f) / 2f) * width
-            val y = height - (((scoreY + 1f) / 2f) * height)
-
-            drawCircle(
-                color = pointColor,
-                radius = 6.dp.toPx(),
-                center = Offset(x, y)
-            )
+            val x = ((( item.primaryScore.toFloatOrNull() ?: 0f) + 1f) / 2f) * size.width
+            val y = size.height - ((((item.secondaryScore.toFloatOrNull() ?: 0f) + 1f) / 2f) * size.height)
+            drawCircle(color = pointColor, radius = 6.dp.toPx(), center = Offset(x, y))
         }
     }
 }
@@ -207,14 +169,17 @@ fun MapScreenPreview() {
     val mockFeatures = listOf("Performance", "Stability", "UI Design", "Security")
     val mockItems = listOf(
         Item("High Performance", android.R.drawable.ic_menu_gallery, "0.8", "0.5"),
-        Item("Low Stability", android.R.drawable.ic_menu_manage, "-0.7", "-0.3")
+        Item("Low Stability",    android.R.drawable.ic_menu_manage,  "-0.7", "-0.3")
     )
-
     MaterialTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             MapScreen(
                 items = mockItems,
-                availableFeatures = mockFeatures
+                availableFeatures = mockFeatures,
+                featureX = mockFeatures[0],
+                featureY = mockFeatures[1],
+                onFeatureXSelected = {},
+                onFeatureYSelected = {}
             )
         }
     }

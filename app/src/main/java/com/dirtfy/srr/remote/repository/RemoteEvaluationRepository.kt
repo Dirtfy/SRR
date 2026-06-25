@@ -11,9 +11,9 @@ class RemoteEvaluationRepository : EvaluationRepository {
 
     private val db = Firebase.firestore
 
-    // Path: features/{featureId}/userEvaluations/{userId}
+    // Path: evaluations/{featureId}/userEvaluations/{userId}
     private fun evaluationDoc(featureId: String, userId: String) =
-        db.collection("features").document(featureId)
+        db.collection("evaluations").document(featureId)
             .collection("userEvaluations").document(userId)
 
     override suspend fun submitEvaluation(evaluation: Evaluation): Result<Unit> =
@@ -30,7 +30,7 @@ class RemoteEvaluationRepository : EvaluationRepository {
 
     override suspend fun getEvaluationsForFeature(featureId: String): Result<List<Evaluation>> =
         runCatching {
-            db.collection("features").document(featureId)
+            db.collection("evaluations").document(featureId)
                 .collection("userEvaluations")
                 .get().await()
                 .documents
