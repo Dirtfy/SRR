@@ -11,10 +11,10 @@ class SRRApplication : Application() {
         super.onCreate()
         if (BuildConfig.DEBUG) {
             // Route debug builds to the Firebase Local Emulator Suite.
-            // AVD reaches the host machine via 10.0.2.2.
-            // Physical device: run `adb reverse tcp:9099 tcp:9099 && adb reverse tcp:8080 tcp:8080` first.
-            Firebase.auth.useEmulator("10.0.2.2", 9099)
-            Firebase.firestore.useEmulator("10.0.2.2", 8080)
+            // Requires `adb reverse tcp:9099 tcp:9099 && adb reverse tcp:8080 tcp:8080` on the host
+            // before launching (works for both physical devices and AVDs).
+            Firebase.auth.useEmulator("localhost", 9099)
+            Firebase.firestore.useEmulator("localhost", 8080)
         }
     }
 }
