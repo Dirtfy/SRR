@@ -4,10 +4,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -17,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import com.dirtfy.srr.core.model.Feature
 import com.dirtfy.srr.core.model.Item
 import com.dirtfy.srr.core.model.ScoreMatrix
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyColumnState
 
 // ---------------------------------------------------------------------------
 // Top-level router
@@ -275,7 +276,7 @@ private fun UserFeatureDetailContent(
 }
 
 // ---------------------------------------------------------------------------
-// Evaluation editor (drag-reorder via up/down buttons)
+// Evaluation editor (drag-to-reorder via sh.calvin.reorderable)
 // ---------------------------------------------------------------------------
 
 @Composable
@@ -286,59 +287,55 @@ private fun EvaluationEditorSheet(
     onSubmit: () -> Unit
 ) {
     val nameById = remember(items) { items.associate { it.id to it.name } }
+    val lazyListState = rememberLazyListState()
+    val reorderState = rememberReorderableLazyColumnState(lazyListState) { from, to ->
+        val newOrder = editor.orderedItemIds.toMutableList().apply {
+            add(to.index, removeAt(from.index))
+        }
+        onReorder(newOrder)
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Rank items strongest → weakest", style = MaterialTheme.typography.titleMedium)
         Text(
-            text  = "Drag or use arrows to reorder",
+            text  = "Drag the handle to reorder",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(12.dp))
 
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            itemsIndexed(editor.orderedItemIds, key = { _, id -> id }) { index, itemId ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text     = "${index + 1}.",
-                        modifier = Modifier.width(32.dp),
-                        style    = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text     = nameById[itemId] ?: itemId,
-                        modifier = Modifier.weight(1f),
-                        style    = MaterialTheme.typography.bodyLarge
-                    )
-                    Column {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            state    = lazyListState
+        ) {
+            items(editor.orderedItemIds, key = { it }) { itemId ->
+                ReorderableItem(reorderState, key = itemId) {
+                    val index = editor.orderedItemIds.indexOf(itemId)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text     = "${index + 1}.",
+                            modifier = Modifier.width(32.dp),
+                            style    = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text     = nameById[itemId] ?: itemId,
+                            modifier = Modifier.weight(1f),
+                            style    = MaterialTheme.typography.bodyLarge
+                        )
                         IconButton(
-                            onClick  = {
-                                if (index > 0) {
-                                    val newOrder = editor.orderedItemIds.toMutableList()
-                                    newOrder.add(index - 1, newOrder.removeAt(index))
-                                    onReorder(newOrder)
-                                }
-                            },
-                            enabled = index > 0
-                        ) { Icon(Icons.Default.KeyboardArrowUp, "Move up") }
-
-                        IconButton(
-                            onClick  = {
-                                if (index < editor.orderedItemIds.lastIndex) {
-                                    val newOrder = editor.orderedItemIds.toMutableList()
-                                    newOrder.add(index + 1, newOrder.removeAt(index))
-                                    onReorder(newOrder)
-                                }
-                            },
-                            enabled = index < editor.orderedItemIds.lastIndex
-                        ) { Icon(Icons.Default.KeyboardArrowDown, "Move down") }
+                            modifier = Modifier.draggableHandle(),
+                            onClick  = {}
+                        ) {
+                            Icon(Icons.Default.DragHandle, contentDescription = "Drag to reorder")
+                        }
                     }
+                    HorizontalDivider()
                 }
-                HorizontalDivider()
             }
         }
 
