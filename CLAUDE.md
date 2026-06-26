@@ -70,3 +70,57 @@ app/src/main/java/com/dirtfy/srr/
 - **Dynamic color (Material You)** is enabled by default in `SRRTheme`; falls back to a purple/pink palette on pre-Android 12 devices.
 - **`android.nonTransitiveRClass=true`** is set in `gradle.properties` — each library's R class is scoped to its own namespace.
 - **Tests are scaffolding only.** `ExampleUnitTest` and `ExampleInstrumentedTest` are the unmodified Android Studio defaults. No real test coverage exists.
+
+---
+
+## Collaboration Rules (User-Defined)
+
+These rules were set explicitly by the user and must be followed in every session without being asked.
+
+### Teammate Roles
+
+Every meaningful piece of work passes through three logical roles. Claude plays all of them, but in sequence — never skipping or merging steps.
+
+| Role | Responsibility |
+|------|---------------|
+| **Debator** | Reviews completed code. Finds problems actively (not passively). Categorizes findings as CRITICAL / WARNING / MINOR. Writes `debat_log/debat_YYYY-MM-DD.md`. |
+| **Developer** | Implements features and bug fixes. Must fix every CRITICAL finding before committing. |
+| **Tester** | Runs the test suite after every commit. Writes `testing_log/test_YYYY-MM-DD.md`. Approves or rejects push. |
+
+### Workflow — Required Order
+
+```
+Debator reviews → Developer fixes CRITICALs → commit (locally)
+→ Tester runs tests → write all logs → push only if Tester approves
+```
+
+1. **Before every commit:** Debator reviews the work and writes the debat log. Developer applies every CRITICAL fix, then commits.
+2. **Commit threshold:** Commit locally when >100 lines have changed or a meaningful milestone is reached. Never accumulate changes across many features without committing.
+3. **After every commit:** Tester runs `./gradlew testDebugUnitTest --no-daemon` and writes the test log.
+4. **Push gate:** Push to remote only after Tester explicitly approves (tests pass).
+5. **Instrumented tests:** Run `./gradlew connectedDebugAndroidTest` only when the user says a device or AVD is connected. If they pass, push all local commits.
+   - Physical device: run `adb reverse tcp:8080 tcp:8080 && adb reverse tcp:9099 tcp:9099` first (Firebase emulator ADB forwarding).
+   - AVD: use `10.0.2.2` instead of `localhost` to reach host emulators.
+
+### Log Files — Mandatory
+
+Three log directories must always exist and grow over time. **Never delete any log file or the README.**
+
+| Directory | Written by | Naming |
+|-----------|-----------|--------|
+| `debat_log/` | Debator | `debat_YYYY-MM-DD.md` (add suffix letter if >1 per day: `debat_2026-06-26b.md`) |
+| `testing_log/` | Tester | `test_YYYY-MM-DD.md` (same suffix rule) |
+| `conversation_log/` | Claude proactively | `conversation_YYYY-MM-DD.md` — write this **before the user sends 10 messages** in a session, not only when asked |
+
+### Autonomy
+
+- Do not ask the user for approval at each step. Work autonomously through the full Debator → Developer → Tester cycle.
+- Only pause and ask if following the rules would be violated or if a destructive/irreversible action is needed (e.g., deleting a branch, force-pushing).
+- **Install tools freely.** If a build step, test, or CI task requires a missing tool (Node.js, Firebase CLI, JDK, etc.), install it with `winget` or `npm` without asking. The user has explicitly granted permission: *"if you need something then do not hesitate just install it!"*
+
+### File Safety
+
+- **Never delete files** unless the file is directly blocking the build and has no other solution.
+- **`README.md` must never be deleted.** It is the source of truth for the implementation plan.
+- **All log files must never be deleted.** They are the audit trail.
+- If unexpected files or branches appear, investigate before deleting — they may be in-progress work.
