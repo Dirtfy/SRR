@@ -127,7 +127,7 @@ private fun UserTabContent(
     onFeatureSelected: (Feature) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = state.activeTab.ordinal) {
+        PrimaryTabRow(selectedTabIndex = state.activeTab.ordinal) {
             UserUiState.Tab.entries.forEach { tab ->
                 Tab(
                     selected = state.activeTab == tab,

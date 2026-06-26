@@ -43,14 +43,12 @@ class CompilationViewModel(
 
     fun onRetryTap() = loadAllData()
 
-    // Debator fix #5: clear selections when switching tabs
     fun onTabSelected(tab: CompilationUiState.Tab) {
         (_uiState.value as? CompilationUiState.Ready)?.let {
             _uiState.value = it.copy(
                 activeTab       = tab,
                 selectedItem    = null,
-                selectedFeature = null,
-                mapPopupItem    = null
+                selectedFeature = null
             )
         }
     }
@@ -64,12 +62,6 @@ class CompilationViewModel(
     fun onFeatureSelected(feature: Feature) {
         (_uiState.value as? CompilationUiState.Ready)?.let {
             _uiState.value = it.copy(selectedFeature = feature)
-        }
-    }
-
-    fun onMapItemTap(item: Item) {
-        (_uiState.value as? CompilationUiState.Ready)?.let {
-            _uiState.value = it.copy(mapPopupItem = item)
         }
     }
 
@@ -88,7 +80,6 @@ class CompilationViewModel(
     fun clearSelection() {
         val state = _uiState.value as? CompilationUiState.Ready ?: return
         _uiState.value = when {
-            state.mapPopupItem  != null -> state.copy(mapPopupItem = null)
             state.selectedItem  != null -> state.copy(selectedItem = null)
             else                        -> state.copy(selectedFeature = null)
         }

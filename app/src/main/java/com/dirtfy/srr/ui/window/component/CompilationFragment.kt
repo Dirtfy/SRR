@@ -35,12 +35,12 @@ class CompilationFragment : BaseFragment() {
     override fun shouldShowBackButton(): Boolean {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         val state = uiState as? CompilationUiState.Ready ?: return false
-        return state.selectedItem != null || state.selectedFeature != null || state.mapPopupItem != null
+        return state.selectedItem != null || state.selectedFeature != null
     }
 
     override fun onBackClick() {
         val state = viewModel.uiState.value as? CompilationUiState.Ready
-        if (state != null && (state.selectedItem != null || state.selectedFeature != null || state.mapPopupItem != null)) {
+        if (state != null && (state.selectedItem != null || state.selectedFeature != null)) {
             viewModel.clearSelection()
         } else {
             super.onBackClick()
@@ -59,15 +59,14 @@ class CompilationFragment : BaseFragment() {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
         CompilationScreen(
-            modifier                = modifier,
-            uiState                 = uiState,
-            onTabSelected           = viewModel::onTabSelected,
-            onItemSelected          = viewModel::onItemSelected,
-            onFeatureSelected       = viewModel::onFeatureSelected,
-            onMapItemTap            = viewModel::onMapItemTap,
-            onMapXFeatureSelected   = viewModel::onMapXFeatureSelected,
-            onMapYFeatureSelected   = viewModel::onMapYFeatureSelected,
-            onRetryTap              = viewModel::onRetryTap
+            modifier              = modifier,
+            uiState               = uiState,
+            onTabSelected         = viewModel::onTabSelected,
+            onItemSelected        = viewModel::onItemSelected,
+            onFeatureSelected     = viewModel::onFeatureSelected,
+            onMapXFeatureSelected = viewModel::onMapXFeatureSelected,
+            onMapYFeatureSelected = viewModel::onMapYFeatureSelected,
+            onRetryTap            = viewModel::onRetryTap
         )
     }
 }

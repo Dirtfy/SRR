@@ -15,7 +15,6 @@ sealed class CompilationUiState {
         val activeTab: Tab = Tab.ITEMS,
         val selectedItem: Item? = null,
         val selectedFeature: Feature? = null,
-        val mapPopupItem: Item? = null,
         // Null means "use the list index default" (features[0]/features[1])
         val mapXFeatureId: String? = null,
         val mapYFeatureId: String? = null

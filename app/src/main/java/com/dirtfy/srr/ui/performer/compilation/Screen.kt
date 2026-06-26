@@ -26,7 +26,6 @@ fun CompilationScreen(
     onTabSelected: (CompilationUiState.Tab) -> Unit,
     onItemSelected: (Item) -> Unit,
     onFeatureSelected: (Feature) -> Unit,
-    onMapItemTap: (Item) -> Unit,
     onMapXFeatureSelected: (String) -> Unit,
     onMapYFeatureSelected: (String) -> Unit,
     onRetryTap: () -> Unit
@@ -54,7 +53,6 @@ fun CompilationScreen(
                     onTabSelected         = onTabSelected,
                     onItemSelected        = onItemSelected,
                     onFeatureSelected     = onFeatureSelected,
-                    onMapItemTap          = onMapItemTap,
                     onMapXFeatureSelected = onMapXFeatureSelected,
                     onMapYFeatureSelected = onMapYFeatureSelected
                 )
@@ -73,7 +71,6 @@ private fun CompilationReadyContent(
     onTabSelected: (CompilationUiState.Tab) -> Unit,
     onItemSelected: (Item) -> Unit,
     onFeatureSelected: (Feature) -> Unit,
-    onMapItemTap: (Item) -> Unit,
     onMapXFeatureSelected: (String) -> Unit,
     onMapYFeatureSelected: (String) -> Unit
 ) {
@@ -98,7 +95,6 @@ private fun CompilationReadyContent(
                 onTabSelected         = onTabSelected,
                 onItemSelected        = onItemSelected,
                 onFeatureSelected     = onFeatureSelected,
-                onMapItemTap          = onMapItemTap,
                 onMapXFeatureSelected = onMapXFeatureSelected,
                 onMapYFeatureSelected = onMapYFeatureSelected
             )
@@ -116,12 +112,11 @@ private fun CompilationTabContent(
     onTabSelected: (CompilationUiState.Tab) -> Unit,
     onItemSelected: (Item) -> Unit,
     onFeatureSelected: (Feature) -> Unit,
-    onMapItemTap: (Item) -> Unit,
     onMapXFeatureSelected: (String) -> Unit,
     onMapYFeatureSelected: (String) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = state.activeTab.ordinal) {
+        PrimaryTabRow(selectedTabIndex = state.activeTab.ordinal) {
             CompilationUiState.Tab.entries.forEach { tab ->
                 Tab(
                     selected = state.activeTab == tab,
