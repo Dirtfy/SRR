@@ -263,17 +263,14 @@ private fun CompilationMapTab(
         ?: state.features.getOrNull(1)
         ?: state.features.getOrNull(0)
 
-    // Convert to map.Item type, normalising [0,10] → [-1,+1] for the canvas
     val mapItems = state.items.map { item ->
-        val xScore = xFeature?.let { state.scoreMatrix.scores[item.id]?.get(it.id) } ?: 5.0
-        val yScore = yFeature?.let { state.scoreMatrix.scores[item.id]?.get(it.id) } ?: 5.0
-        val xRaw = (xScore / 10.0) * 2.0 - 1.0
-        val yRaw = (yScore / 10.0) * 2.0 - 1.0
+        val xScore = xFeature?.let { state.scoreMatrix.scores[item.id]?.get(it.id) }
+        val yScore = yFeature?.let { state.scoreMatrix.scores[item.id]?.get(it.id) }
         MapItem(
             title          = item.name,
             imageRes       = android.R.drawable.ic_menu_agenda,
-            primaryScore   = "%.2f".format(xRaw),
-            secondaryScore = "%.2f".format(yRaw)
+            primaryScore   = if (xScore != null) "%.1f".format(xScore) else "—",
+            secondaryScore = if (yScore != null) "%.1f".format(yScore) else "—"
         )
     }
 

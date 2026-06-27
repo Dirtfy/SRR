@@ -141,10 +141,10 @@ fun ScatterPlot(items: List<Item>, onPointClick: (Item) -> Unit) {
             .pointerInput(items) {
                 detectTapGestures { offset ->
                     items.forEach { item ->
-                        val xVal = item.primaryScore.toFloatOrNull() ?: 0f
-                        val yVal = item.secondaryScore.toFloatOrNull() ?: 0f
-                        val canvasX = ((xVal + 1f) / 2f) * size.width
-                        val canvasY = size.height - (((yVal + 1f) / 2f) * size.height)
+                        val xVal = item.primaryScore.toFloatOrNull() ?: 5f
+                        val yVal = item.secondaryScore.toFloatOrNull() ?: 5f
+                        val canvasX = (xVal / 10f) * size.width
+                        val canvasY = size.height - ((yVal / 10f) * size.height)
                         if ((Offset(canvasX, canvasY) - offset).getDistance() < 50f) onPointClick(item)
                     }
                 }
@@ -156,8 +156,8 @@ fun ScatterPlot(items: List<Item>, onPointClick: (Item) -> Unit) {
         drawLine(axisColor, Offset(centerX, 0f), Offset(centerX, size.height), strokeWidth = 1.dp.toPx())
 
         items.forEach { item ->
-            val x = ((( item.primaryScore.toFloatOrNull() ?: 0f) + 1f) / 2f) * size.width
-            val y = size.height - ((((item.secondaryScore.toFloatOrNull() ?: 0f) + 1f) / 2f) * size.height)
+            val x = (item.primaryScore.toFloatOrNull() ?: 5f) / 10f * size.width
+            val y = size.height - ((item.secondaryScore.toFloatOrNull() ?: 5f) / 10f * size.height)
             drawCircle(color = pointColor, radius = 6.dp.toPx(), center = Offset(x, y))
         }
     }
