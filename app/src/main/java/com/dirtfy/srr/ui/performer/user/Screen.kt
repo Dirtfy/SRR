@@ -219,6 +219,7 @@ private fun UserTabContent(
                 FeaturesTabContent(
                     features                = state.features,
                     currentUserId           = state.currentUserId,
+                    evaluatedFeatureIds     = state.evaluatedFeatureIds,
                     evaluatorCountByFeature = state.evaluatorCountByFeature,
                     onFeatureSelected       = onFeatureSelected,
                     onAddClick              = onOpenAddFeatureDialog,
@@ -280,6 +281,7 @@ private fun ItemsTabContent(
 private fun FeaturesTabContent(
     features: List<Feature>,
     currentUserId: String,
+    evaluatedFeatureIds: Set<String>,
     evaluatorCountByFeature: Map<String, Int>,
     onFeatureSelected: (Feature) -> Unit,
     onAddClick: () -> Unit,
@@ -292,17 +294,31 @@ private fun FeaturesTabContent(
         ) {
             items(features, key = { it.id }) { feature ->
                 val evaluatorCount = evaluatorCountByFeature[feature.id] ?: 0
+                val hasEvaluated   = feature.id in evaluatedFeatureIds
                 val isOwner = feature.createdBy == currentUserId && currentUserId.isNotEmpty()
                 ListItem(
                     headlineContent   = { Text(feature.name) },
-                    supportingContent = if (isOwner) { { Text("Added by you", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } } else null,
+                    supportingContent = when {
+                        isOwner      -> { { Text("Added by you", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } }
+                        !hasEvaluated -> { { Text("Tap to evaluate", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary) } }
+                        else          -> null
+                    },
                     trailingContent   = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text  = "$evaluatorCount evaluated",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text  = "$evaluatorCount evaluated",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (hasEvaluated) {
+                                    Text(
+                                        text  = "You evaluated",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
                             if (isOwner) {
                                 IconButton(onClick = { onRequestDeleteFeature(feature.id, feature.name) }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)

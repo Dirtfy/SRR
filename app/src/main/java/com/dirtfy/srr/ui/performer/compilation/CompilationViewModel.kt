@@ -32,9 +32,11 @@ class CompilationViewModel(
             loadFeatureScoresUseCase.execute()
                 .onSuccess { output ->
                     _uiState.value = CompilationUiState.Ready(
-                        items       = output.items,
-                        features    = output.features,
-                        scoreMatrix = output.scoreMatrix
+                        items                   = output.items,
+                        features                = output.features,
+                        scoreMatrix             = output.scoreMatrix,
+                        evaluatorCountByFeature = output.evaluationsByFeature
+                            .mapValues { (_, evals) -> evals.size }
                     )
                 }
                 .onFailure { e -> _uiState.value = CompilationUiState.Error(e.message ?: "Failed to load") }

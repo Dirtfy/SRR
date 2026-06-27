@@ -128,7 +128,7 @@ private fun CompilationTabContent(
 
         when (state.activeTab) {
             CompilationUiState.Tab.ITEMS    -> CompilationItemsTab(state.items, onItemSelected)
-            CompilationUiState.Tab.FEATURES -> CompilationFeaturesTab(state.features, state.items, state.scoreMatrix, onFeatureSelected)
+            CompilationUiState.Tab.FEATURES -> CompilationFeaturesTab(state.features, state.evaluatorCountByFeature, onFeatureSelected)
             CompilationUiState.Tab.MAP      -> CompilationMapTab(state, onMapXFeatureSelected, onMapYFeatureSelected)
         }
     }
@@ -155,19 +155,43 @@ private fun CompilationItemsTab(items: List<Item>, onItemSelected: (Item) -> Uni
 // Features tab
 // ---------------------------------------------------------------------------
 
+private const val SCORE_THRESHOLD = 3  // must match LoadFeatureScoresUseCase default
+
 @Composable
 private fun CompilationFeaturesTab(
     features: List<Feature>,
-    items: List<Item>,
-    matrix: ScoreMatrix,
+    evaluatorCountByFeature: Map<String, Int>,
     onFeatureSelected: (Feature) -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(features, key = { it.id }) { feature ->
-            val scoredCount = items.count { matrix.scores[it.id]?.get(feature.id) != null }
+            val evaluatorCount = evaluatorCountByFeature[feature.id] ?: 0
+            val pct = (evaluatorCount.coerceAtMost(SCORE_THRESHOLD) * 100 / SCORE_THRESHOLD)
+            val isScored = evaluatorCount >= SCORE_THRESHOLD
             ListItem(
-                headlineContent = { Text(feature.name) },
-                trailingContent = { Text("$scoredCount/${items.size} scored") },
+                headlineContent   = { Text(feature.name) },
+                supportingContent = if (isScored) { {
+                    Text(
+                        text  = "Scores available",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } } else null,
+                trailingContent   = {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text  = "$pct%",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (isScored) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text  = "$evaluatorCount / $SCORE_THRESHOLD users",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 modifier = Modifier.clickable { onFeatureSelected(feature) }
             )
             HorizontalDivider()

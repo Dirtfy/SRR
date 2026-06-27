@@ -12,6 +12,8 @@ sealed class CompilationUiState {
         val items: List<Item>,
         val features: List<Feature>,
         val scoreMatrix: ScoreMatrix,
+        // featureId → number of users who submitted an evaluation
+        val evaluatorCountByFeature: Map<String, Int> = emptyMap(),
         val activeTab: Tab = Tab.ITEMS,
         val selectedItem: Item? = null,
         val selectedFeature: Feature? = null,
