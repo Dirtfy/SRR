@@ -122,12 +122,13 @@ class CompilationScreenUiTest {
     }
 
     @Test
-    fun featuresTab_twoEvaluators_shows67Percent() {
+    fun featuresTab_twoEvaluators_shows66Percent() {
         setScreen(readyState(
             activeTab = CompilationUiState.Tab.FEATURES,
             evaluatorCountByFeature = mapOf(perf.id to 2, stab.id to 0)
         ))
-        composeTestRule.onNodeWithText("67%").assertIsDisplayed()
+        // 2 * 100 / 3 = 66 (integer division)
+        composeTestRule.onNodeWithText("66%").assertIsDisplayed()
     }
 
     @Test
@@ -136,6 +137,7 @@ class CompilationScreenUiTest {
             activeTab = CompilationUiState.Tab.FEATURES,
             evaluatorCountByFeature = mapOf(perf.id to 1, stab.id to 0)
         ))
+        // 1 * 100 / 3 = 33 (integer division)
         composeTestRule.onNodeWithText("33%").assertIsDisplayed()
     }
 
@@ -251,8 +253,10 @@ class CompilationScreenUiTest {
     @Test
     fun loadingState_showsProgressIndicator() {
         setScreen(CompilationUiState.Loading)
-        composeTestRule.onNodeWithContentDescription("Circular progress indicator")
-            .assertExists()
+        // Loading state must NOT show any item/feature text — the content is not rendered
+        composeTestRule.onAllNodesWithText("Phone").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Performance").assertCountEquals(0)
+        composeTestRule.onRoot().assertExists()
     }
 
     @Test

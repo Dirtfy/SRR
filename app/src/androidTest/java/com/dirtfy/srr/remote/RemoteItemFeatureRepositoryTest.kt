@@ -3,7 +3,6 @@ package com.dirtfy.srr.remote
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.dirtfy.srr.remote.repository.RemoteFeatureRepository
 import com.dirtfy.srr.remote.repository.RemoteItemRepository
-import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -34,30 +33,48 @@ class RemoteItemFeatureRepositoryTest {
         @BeforeClass
         @JvmStatic
         fun setUpEmulators() {
-            // try-catch: second test class in the same process gets here after the Firestore
-            // client is already initialized; calling useEmulator() again would throw.
             try { Firebase.auth.useEmulator("localhost", 9099) } catch (_: Exception) {}
             try { Firebase.firestore.useEmulator("localhost", 8080) } catch (_: Exception) {}
+            try {
+                Firebase.firestore.firestoreSettings =
+                    com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
+                        .setPersistenceEnabled(false)
+                        .build()
+            } catch (_: Exception) {}
         }
     }
 
     private lateinit var itemRepository: RemoteItemRepository
     private lateinit var featureRepository: RemoteFeatureRepository
 
+    // Timestamp suffix makes every email address globally unique per JVM launch,
+    // so accounts from a prior test run that the emulator hasn't fully deleted yet
+    // can never cause a collision in the current run.
+    private val p = System.currentTimeMillis().toString().takeLast(8)
+    private suspend fun signUpWith(tag: String): String {
+        Firebase.auth.signOut()
+        Firebase.auth.createUserWithEmailAndPassword("${p}_${tag}@t.com", "pw123456").await()
+        return Firebase.auth.currentUser!!.uid
+    }
+
+    private fun clearEmulator() {
+        try { Firebase.auth.signOut() } catch (_: Exception) {}
+        try {
+            deleteUrl("http://localhost:8080/emulator/v1/projects/shared-relative-rank/databases/(default)/documents")
+            deleteUrl("http://localhost:9099/emulator/v1/projects/shared-relative-rank/accounts")
+        } catch (_: Exception) {}
+    }
+
     @Before
     fun setUp() {
+        clearEmulator()  // start every test with a clean slate
         itemRepository    = RemoteItemRepository()
         featureRepository = RemoteFeatureRepository()
     }
 
     @After
-    fun tearDown() = runBlocking {
-        Firebase.auth.signOut()
-        try {
-            val projectId = FirebaseApp.getInstance().options.projectId ?: return@runBlocking
-            deleteUrl("http://localhost:8080/emulator/v1/projects/$projectId/databases/(default)/documents")
-            deleteUrl("http://localhost:9099/emulator/v1/projects/$projectId/accounts")
-        } catch (_: Exception) {}
+    fun tearDown() {
+        clearEmulator()
     }
 
     private fun deleteUrl(urlStr: String) {
@@ -74,8 +91,7 @@ class RemoteItemFeatureRepositoryTest {
 
     @Test
     fun createItem_storesNameAndCreatedBy() = runBlocking {
-        Firebase.auth.createUserWithEmailAndPassword("itemcreate@test.com", "pw123456").await()
-        val uid = Firebase.auth.currentUser!!.uid
+        val uid = signUpWith("itemcreate")
 
         val item = itemRepository.createItem("Laptop", uid).getOrThrow()
 
@@ -91,14 +107,12 @@ class RemoteItemFeatureRepositoryTest {
     @Test
     fun items_visibleToAllSignedInUsers() = runBlocking {
         // User A creates two items
-        Firebase.auth.createUserWithEmailAndPassword("itemvis_a@test.com", "pw123456").await()
-        val uidA   = Firebase.auth.currentUser!!.uid
+        val uidA   = signUpWith("itemvis_a")
         val laptop = itemRepository.createItem("Laptop", uidA).getOrThrow()
         val tablet = itemRepository.createItem("Tablet", uidA).getOrThrow()
-        Firebase.auth.signOut()
 
         // User B reads — should see both
-        Firebase.auth.createUserWithEmailAndPassword("itemvis_b@test.com", "pw123456").await()
+        signUpWith("itemvis_b")
         val items = itemRepository.getAllItems().getOrThrow()
         val ids   = items.map { it.id }
 
@@ -114,8 +128,7 @@ class RemoteItemFeatureRepositoryTest {
 
     @Test
     fun items_returnedInCreationOrder() = runBlocking {
-        Firebase.auth.createUserWithEmailAndPassword("itemorder@test.com", "pw123456").await()
-        val uid = Firebase.auth.currentUser!!.uid
+        val uid = signUpWith("itemorder")
 
         itemRepository.createItem("First",  uid).getOrThrow(); Thread.sleep(150)
         itemRepository.createItem("Second", uid).getOrThrow(); Thread.sleep(150)
@@ -136,8 +149,7 @@ class RemoteItemFeatureRepositoryTest {
 
     @Test
     fun creator_canDeleteOwnItem() = runBlocking {
-        Firebase.auth.createUserWithEmailAndPassword("itemdel@test.com", "pw123456").await()
-        val uid  = Firebase.auth.currentUser!!.uid
+        val uid = signUpWith("itemdel")
         val item = itemRepository.createItem("ToDelete", uid).getOrThrow()
 
         itemRepository.deleteItem(item.id).getOrThrow()
@@ -149,13 +161,11 @@ class RemoteItemFeatureRepositoryTest {
     @Test
     fun nonCreator_cannotDeleteItem() = runBlocking {
         // Owner creates the item
-        Firebase.auth.createUserWithEmailAndPassword("itemprot_a@test.com", "pw123456").await()
-        val uidA = Firebase.auth.currentUser!!.uid
+        val uidA = signUpWith("itemprot_a")
         val item = itemRepository.createItem("Protected", uidA).getOrThrow()
-        Firebase.auth.signOut()
 
         // Intruder attempts delete
-        Firebase.auth.createUserWithEmailAndPassword("itemprot_b@test.com", "pw123456").await()
+        signUpWith("itemprot_b")
         val result = itemRepository.deleteItem(item.id)
 
         assertTrue("Non-creator delete must fail (PERMISSION_DENIED)", result.isFailure)
@@ -170,8 +180,7 @@ class RemoteItemFeatureRepositoryTest {
 
     @Test
     fun createFeature_storesNameAndCreatedBy() = runBlocking {
-        Firebase.auth.createUserWithEmailAndPassword("featcreate@test.com", "pw123456").await()
-        val uid = Firebase.auth.currentUser!!.uid
+        val uid = signUpWith("featcreate")
 
         val feature = featureRepository.createFeature("Performance", uid).getOrThrow()
 
@@ -186,13 +195,11 @@ class RemoteItemFeatureRepositoryTest {
 
     @Test
     fun features_visibleToAllSignedInUsers() = runBlocking {
-        Firebase.auth.createUserWithEmailAndPassword("featvis_a@test.com", "pw123456").await()
-        val uidA = Firebase.auth.currentUser!!.uid
+        val uidA = signUpWith("featvis_a")
         val perf = featureRepository.createFeature("Performance", uidA).getOrThrow()
         val stab = featureRepository.createFeature("Stability",   uidA).getOrThrow()
-        Firebase.auth.signOut()
 
-        Firebase.auth.createUserWithEmailAndPassword("featvis_b@test.com", "pw123456").await()
+        signUpWith("featvis_b")
         val features = featureRepository.getAllFeatures().getOrThrow()
         val ids      = features.map { it.id }
 
@@ -207,8 +214,7 @@ class RemoteItemFeatureRepositoryTest {
 
     @Test
     fun features_returnedInCreationOrder() = runBlocking {
-        Firebase.auth.createUserWithEmailAndPassword("featorder@test.com", "pw123456").await()
-        val uid = Firebase.auth.currentUser!!.uid
+        val uid = signUpWith("featorder")
 
         featureRepository.createFeature("First",  uid).getOrThrow(); Thread.sleep(150)
         featureRepository.createFeature("Second", uid).getOrThrow(); Thread.sleep(150)
@@ -229,8 +235,7 @@ class RemoteItemFeatureRepositoryTest {
 
     @Test
     fun creator_canDeleteOwnFeature() = runBlocking {
-        Firebase.auth.createUserWithEmailAndPassword("featdel@test.com", "pw123456").await()
-        val uid     = Firebase.auth.currentUser!!.uid
+        val uid = signUpWith("featdel")
         val feature = featureRepository.createFeature("ToDelete", uid).getOrThrow()
 
         featureRepository.deleteFeature(feature.id).getOrThrow()
@@ -241,12 +246,10 @@ class RemoteItemFeatureRepositoryTest {
 
     @Test
     fun nonCreator_cannotDeleteFeature() = runBlocking {
-        Firebase.auth.createUserWithEmailAndPassword("featprot_a@test.com", "pw123456").await()
-        val uidA    = Firebase.auth.currentUser!!.uid
+        val uidA    = signUpWith("featprot_a")
         val feature = featureRepository.createFeature("Protected", uidA).getOrThrow()
-        Firebase.auth.signOut()
 
-        Firebase.auth.createUserWithEmailAndPassword("featprot_b@test.com", "pw123456").await()
+        signUpWith("featprot_b")
         val result = featureRepository.deleteFeature(feature.id)
 
         assertTrue("Non-creator delete must fail (PERMISSION_DENIED)", result.isFailure)

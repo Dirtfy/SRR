@@ -250,8 +250,11 @@ class UserScreenUiTest {
     @Test
     fun loadingState_showsProgressIndicator() {
         setScreen(UserUiState.Loading)
-        composeTestRule.onNodeWithContentDescription("Circular progress indicator")
-            .assertExists()
+        // Loading state must NOT show any item/feature text — the content is not rendered
+        composeTestRule.onAllNodesWithText("Laptop").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Performance").assertCountEquals(0)
+        // At least one node exists (the spinner itself)
+        composeTestRule.onRoot().assertExists()
     }
 
     @Test

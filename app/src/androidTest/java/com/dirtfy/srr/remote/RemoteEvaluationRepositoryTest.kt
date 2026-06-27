@@ -4,7 +4,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.dirtfy.srr.core.model.Evaluation
 import com.dirtfy.srr.core.scoring.DefaultFeatureScoringEngine
 import com.dirtfy.srr.remote.repository.RemoteEvaluationRepository
-import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -44,29 +43,45 @@ class RemoteEvaluationRepositoryTest {
         @BeforeClass
         @JvmStatic
         fun setUpEmulators() {
-            Firebase.auth.useEmulator("localhost", 9099)
-            Firebase.firestore.useEmulator("localhost", 8080)
+            try { Firebase.auth.useEmulator("localhost", 9099) } catch (_: Exception) {}
+            try { Firebase.firestore.useEmulator("localhost", 8080) } catch (_: Exception) {}
+            // Must be in its own try-catch: useEmulator() above throws when already set,
+            // which would prevent setPersistenceEnabled from running inside the same block.
+            try {
+                Firebase.firestore.firestoreSettings =
+                    com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
+                        .setPersistenceEnabled(false)
+                        .build()
+            } catch (_: Exception) {}
         }
     }
 
     private lateinit var repository: RemoteEvaluationRepository
 
+    private val p = System.currentTimeMillis().toString().takeLast(8)
+    private suspend fun signUpWith(tag: String): String {
+        Firebase.auth.signOut()
+        Firebase.auth.createUserWithEmailAndPassword("${p}_${tag}@t.com", "password123").await()
+        return Firebase.auth.currentUser!!.uid
+    }
+
+    private fun clearEmulator() {
+        try { Firebase.auth.signOut() } catch (_: Exception) {}
+        try {
+            deleteUrl("http://localhost:8080/emulator/v1/projects/shared-relative-rank/databases/(default)/documents")
+            deleteUrl("http://localhost:9099/emulator/v1/projects/shared-relative-rank/accounts")
+        } catch (_: Exception) {}
+    }
+
     @Before
     fun setUp() {
+        clearEmulator()
         repository = RemoteEvaluationRepository()
     }
 
     @After
-    fun tearDown() = runBlocking {
-        Firebase.auth.signOut()
-        // Clear Firestore emulator data so tests are independent
-        try {
-            val projectId = FirebaseApp.getInstance().options.projectId ?: return@runBlocking
-            deleteUrl("http://localhost:8080/emulator/v1/projects/$projectId/databases/(default)/documents")
-            deleteUrl("http://localhost:9099/emulator/v1/projects/$projectId/accounts")
-        } catch (_: Exception) {
-            // Non-fatal: emulator may not be running in all CI environments
-        }
+    fun tearDown() {
+        clearEmulator()
     }
 
     private fun deleteUrl(urlStr: String) {
@@ -86,9 +101,7 @@ class RemoteEvaluationRepositoryTest {
         val featureId = "feature_durability"
         val ordered   = listOf("item_b", "item_c", "item_a")
 
-        // Sign in so security rules (request.auth != null && uid == docId) pass
-        Firebase.auth.createUserWithEmailAndPassword("write@test.com", "password123").await()
-        val userId = Firebase.auth.currentUser!!.uid
+        val userId = signUpWith("write")
 
         val result = repository.submitEvaluation(Evaluation(userId, featureId, ordered))
         assertTrue("submitEvaluation should succeed", result.isSuccess)
@@ -111,12 +124,11 @@ class RemoteEvaluationRepositoryTest {
 
     @Test
     fun submitEvaluation_resubmitOverwritesPrevious() = runBlocking {
-        val featureId   = "feature_portability"
+        val featureId   = "${p}_feature_portability"
         val firstOrder  = listOf("item_a", "item_b")
         val secondOrder = listOf("item_b", "item_a")
 
-        Firebase.auth.createUserWithEmailAndPassword("overwrite@test.com", "password123").await()
-        val userId = Firebase.auth.currentUser!!.uid
+        val userId = signUpWith("overwrite")
 
         repository.submitEvaluation(Evaluation(userId, featureId, firstOrder)).getOrThrow()
         repository.submitEvaluation(Evaluation(userId, featureId, secondOrder)).getOrThrow()
@@ -128,15 +140,12 @@ class RemoteEvaluationRepositoryTest {
 
     @Test
     fun getEvaluationsForFeature_returnsAllUsers() = runBlocking {
-        val featureId = "feature_safety"
+        val featureId = "${p}_feature_safety"
 
-        Firebase.auth.createUserWithEmailAndPassword("userA@test.com", "password123").await()
-        val uidA = Firebase.auth.currentUser!!.uid
+        val uidA = signUpWith("userA")
         repository.submitEvaluation(Evaluation(uidA, featureId, listOf("item_a", "item_b"))).getOrThrow()
-        Firebase.auth.signOut()
 
-        Firebase.auth.createUserWithEmailAndPassword("userB@test.com", "password123").await()
-        val uidB = Firebase.auth.currentUser!!.uid
+        val uidB = signUpWith("userB")
         repository.submitEvaluation(Evaluation(uidB, featureId, listOf("item_b", "item_a"))).getOrThrow()
 
         val evaluations = repository.getEvaluationsForFeature(featureId).getOrThrow()
@@ -148,24 +157,19 @@ class RemoteEvaluationRepositoryTest {
 
     @Test
     fun threeUsersEvaluate_scoreExceedsThreshold() = runBlocking {
-        val featureId = "feature_threshold"
+        val featureId = "${p}_feature_threshold"
         val allItemIds = listOf("item_a", "item_b", "item_c")
 
         // User A: A > B > C
-        Firebase.auth.createUserWithEmailAndPassword("threshA@test.com", "password123").await()
-        val uidA = Firebase.auth.currentUser!!.uid
+        val uidA = signUpWith("threshA")
         repository.submitEvaluation(Evaluation(uidA, featureId, listOf("item_a", "item_b", "item_c"))).getOrThrow()
-        Firebase.auth.signOut()
 
         // User B: B > A > C
-        Firebase.auth.createUserWithEmailAndPassword("threshB@test.com", "password123").await()
-        val uidB = Firebase.auth.currentUser!!.uid
+        val uidB = signUpWith("threshB")
         repository.submitEvaluation(Evaluation(uidB, featureId, listOf("item_b", "item_a", "item_c"))).getOrThrow()
-        Firebase.auth.signOut()
 
         // User C: A > C > B
-        Firebase.auth.createUserWithEmailAndPassword("threshC@test.com", "password123").await()
-        val uidC = Firebase.auth.currentUser!!.uid
+        val uidC = signUpWith("threshC")
         repository.submitEvaluation(Evaluation(uidC, featureId, listOf("item_a", "item_c", "item_b"))).getOrThrow()
 
         val evaluations = repository.getEvaluationsForFeature(featureId).getOrThrow()
@@ -192,7 +196,7 @@ class RemoteEvaluationRepositoryTest {
     @Test
     fun getEvaluationsForFeature_returnsEmptyListWhenNoEvaluations() = runBlocking {
         // Must sign in: security rules require request.auth != null even for reads
-        Firebase.auth.createUserWithEmailAndPassword("empty@test.com", "password123").await()
+        signUpWith("empty")
 
         val result = repository.getEvaluationsForFeature("feature_nonexistent").getOrThrow()
         assertTrue("Must return empty list when feature has no evaluations", result.isEmpty())
