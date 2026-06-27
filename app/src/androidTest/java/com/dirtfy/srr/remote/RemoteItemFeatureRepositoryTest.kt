@@ -33,14 +33,11 @@ class RemoteItemFeatureRepositoryTest {
         @BeforeClass
         @JvmStatic
         fun setUpEmulators() {
+            // SRRApplication.onCreate() already calls setPersistenceEnabled(false) + useEmulator().
+            // DO NOT call firestoreSettings = Builder()...build() here — Builder() starts from
+            // DEFAULT (production) host, which would overwrite the emulator URL.
             try { Firebase.auth.useEmulator("localhost", 9099) } catch (_: Exception) {}
             try { Firebase.firestore.useEmulator("localhost", 8080) } catch (_: Exception) {}
-            try {
-                Firebase.firestore.firestoreSettings =
-                    com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
-                        .setPersistenceEnabled(false)
-                        .build()
-            } catch (_: Exception) {}
         }
     }
 
@@ -81,7 +78,7 @@ class RemoteItemFeatureRepositoryTest {
         val conn = URL(urlStr).openConnection() as HttpURLConnection
         conn.requestMethod  = "DELETE"
         conn.connectTimeout = 3_000
-        conn.connect()
+        conn.responseCode   // triggers the request to be sent and waits for response
         conn.disconnect()
     }
 
@@ -156,6 +153,39 @@ class RemoteItemFeatureRepositoryTest {
 
         val ids = itemRepository.getAllItems().getOrThrow().map { it.id }
         assertFalse("Deleted item must not appear in getAllItems", item.id in ids)
+    }
+
+    // -----------------------------------------------------------------------
+    // Item: uniqueness enforcement
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun createItem_duplicateName_fails() = runBlocking {
+        val uid = signUpWith("itemdup")
+        itemRepository.createItem("Laptop", uid).getOrThrow()
+
+        val result = itemRepository.createItem("Laptop", uid)
+        assertTrue("Duplicate item name must return failure", result.isFailure)
+        assertTrue("Error message must mention 'already exists'",
+            result.exceptionOrNull()?.message?.contains("already exists") == true)
+    }
+
+    @Test
+    fun createItem_caseInsensitiveDuplicate_fails() = runBlocking {
+        val uid = signUpWith("itemcase")
+        itemRepository.createItem("Laptop", uid).getOrThrow()
+
+        val result = itemRepository.createItem("LAPTOP", uid)
+        assertTrue("Case-insensitive duplicate must return failure", result.isFailure)
+    }
+
+    @Test
+    fun createItem_sameNameAsFeature_succeeds() = runBlocking {
+        val uid = signUpWith("itemfeatshare")
+        featureRepository.createFeature("Durability", uid).getOrThrow()
+
+        val result = itemRepository.createItem("Durability", uid)
+        assertTrue("Item can share a name with a feature", result.isSuccess)
     }
 
     @Test
@@ -242,6 +272,30 @@ class RemoteItemFeatureRepositoryTest {
 
         val ids = featureRepository.getAllFeatures().getOrThrow().map { it.id }
         assertFalse("Deleted feature must not appear in getAllFeatures", feature.id in ids)
+    }
+
+    // -----------------------------------------------------------------------
+    // Feature: uniqueness enforcement
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun createFeature_duplicateName_fails() = runBlocking {
+        val uid = signUpWith("featdup")
+        featureRepository.createFeature("Durability", uid).getOrThrow()
+
+        val result = featureRepository.createFeature("Durability", uid)
+        assertTrue("Duplicate feature name must return failure", result.isFailure)
+        assertTrue("Error message must mention 'already exists'",
+            result.exceptionOrNull()?.message?.contains("already exists") == true)
+    }
+
+    @Test
+    fun createFeature_caseInsensitiveDuplicate_fails() = runBlocking {
+        val uid = signUpWith("featcase")
+        featureRepository.createFeature("Durability", uid).getOrThrow()
+
+        val result = featureRepository.createFeature("DURABILITY", uid)
+        assertTrue("Case-insensitive duplicate feature name must return failure", result.isFailure)
     }
 
     @Test

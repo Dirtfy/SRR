@@ -23,12 +23,23 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Routes to Firebase Local Emulator Suite — used by unit tests and development
+            buildConfigField("Boolean", "USE_EMULATOR", "true")
+        }
         release {
+            buildConfigField("Boolean", "USE_EMULATOR", "false")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        // staging: production Firebase + debug signing. Use `./gradlew installStaging` to
+        // install an APK that connects to real Firestore/Auth for manual end-to-end testing.
+        create("staging") {
+            initWith(getByName("debug"))
+            buildConfigField("Boolean", "USE_EMULATOR", "false")
         }
     }
     compileOptions {

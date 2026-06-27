@@ -483,3 +483,96 @@ Files: `ui/performer/user/Screen.kt`, `ui/window/component/UserFragment.kt`
 File: `app/src/androidTest/.../RemoteEvaluationRepositoryTest.kt`
 
 - [x] `threeUsersEvaluate_scoreExceedsThreshold`: create 3 users, each submits evaluation for same feature, retrieve all 3, run `DefaultFeatureScoringEngine` inline, assert computed score is non-null
+
+---
+
+## Phase 8 — Backend Hardening + Production Deployment
+
+### Firebase Backend Data Model
+
+#### `/items/{itemId}`
+| Field | Type | Notes |
+|-------|------|-------|
+| `name` | string | Display name, 1–100 chars |
+| `nameLower` | string | `name.trim().lowercase()` — used for case-insensitive uniqueness query |
+| `createdBy` | string | `auth.uid` of creator — enforced by security rule on create |
+| `createdAt` | timestamp | Server timestamp; used for chronological ordering |
+
+#### `/features/{featureId}`
+Same structure as `items`.
+
+#### `/evaluations/{featureId}/userEvaluations/{userId}`
+| Field | Type | Notes |
+|-------|------|-------|
+| `userId` | string | Matches document path `userId` and `auth.uid` |
+| `featureId` | string | Matches parent document path `featureId` |
+| `orderedItemIds` | string[] | Item IDs ordered strongest→weakest; must be non-empty |
+| `submittedAt` | timestamp | Server timestamp on create/update |
+
+### Security Rules Design
+```
+items / features:
+  read:   any auth'd user
+  create: auth required + createdBy == auth.uid + name 1–100 chars
+  delete: creator only (resource.data.createdBy == auth.uid)
+
+evaluations/{featureId}/userEvaluations/{userId}:
+  read:   any auth'd user
+  write:  auth required + auth.uid == userId + orderedItemIds non-empty
+```
+
+### Build Variants
+| Variant | Firebase target | Signing | Use case |
+|---------|----------------|---------|----------|
+| `debug` | Local Emulator Suite (localhost) | debug key | Development + automated tests |
+| `staging` | Production Firebase | debug key | Manual testing with real data |
+| `release` | Production Firebase | release key | Distribution |
+
+`USE_EMULATOR` BuildConfig flag (true only in `debug`) drives `SRRApplication.useEmulator()`.
+
+### Indexes
+Firestore auto-creates single-field indexes. No composite indexes needed for current queries:
+- `items.createdAt ASC` — auto index (for `getAllItems` ordering)
+- `items.nameLower` — auto index (for uniqueness `whereEqualTo` query)
+- `features.createdAt ASC` — auto index
+- `features.nameLower` — auto index
+
+### Future Backend Work (not yet implemented)
+- **Cascade deletes** — when item deleted, remove its orderedItemIds from all evaluations (Cloud Function trigger)
+- **User profiles** — `/users/{uid}` collection with display name
+- **Real-time listeners** — replace one-shot `get()` with `addSnapshotListener()` in repositories
+- **Firebase App Check** — protect against unauthorized clients
+- **Atomic uniqueness** — replace check-then-create with Firestore transaction + `/item_names/{nameLower}` index doc to eliminate race condition
+
+**Step 42: Enforce name uniqueness (case-insensitive)**
+
+Files: `remote/repository/RemoteItemRepository.kt`, `remote/repository/RemoteFeatureRepository.kt`
+
+- [x] Store `nameLower = name.trim().lowercase()` in Firestore on create
+- [x] `whereEqualTo("nameLower", nameLower)` before `add()` — throw `IllegalArgumentException` if duplicate found
+- [x] Error propagates to `onAddItem` / `onAddFeature` failure handler → shown in dialog `error` field
+- Note: items and features do NOT share a uniqueness constraint (an item and a feature may have the same name)
+
+**Step 43: Harden Firestore security rules**
+
+File: `firestore.rules`
+
+- [x] Add `request.resource.data.createdBy == request.auth.uid` to items/features `create` rule
+- [x] Add `request.resource.data.name.size() <= 100` length cap
+- [x] Add `request.resource.data.orderedItemIds is list && orderedItemIds.size() > 0` to evaluation `write` rule
+
+**Step 44: Add `staging` build type**
+
+File: `app/build.gradle.kts`, `app/src/main/java/.../SRRApplication.kt`
+
+- [x] Add `staging` build type: `initWith(debug)` + `buildConfigField("Boolean", "USE_EMULATOR", "false")`
+- [x] Add `debug { buildConfigField("Boolean", "USE_EMULATOR", "true") }` and `release { ... "false" }`
+- [x] Replace `BuildConfig.DEBUG` with `BuildConfig.USE_EMULATOR` in `SRRApplication.kt`
+- Install with: `./gradlew installStaging`
+
+**Step 45: Deploy to production Firebase**
+
+- [ ] `firebase deploy --only firestore:rules` — publish hardened rules to production
+- [ ] Verify **Authentication → Sign-in method → Email/Password** is enabled in Firebase console
+- [ ] `./gradlew installStaging` — install production-Firebase-connected APK on device
+- [ ] Manual sign-up + item/feature creation smoke test on real Firebase data

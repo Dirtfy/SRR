@@ -41,14 +41,14 @@ class MultiUserFlowTest {
         @BeforeClass
         @JvmStatic
         fun setUpEmulators() {
+            // SRRApplication.onCreate() already calls setPersistenceEnabled(false) + useEmulator()
+            // before the client is created.  These try-catches are kept only as a guard for
+            // hypothetical environments where the Application is not invoked first.
             try { Firebase.auth.useEmulator("localhost", 9099) } catch (_: Exception) {}
             try { Firebase.firestore.useEmulator("localhost", 8080) } catch (_: Exception) {}
-            try {
-                Firebase.firestore.firestoreSettings =
-                    com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
-                        .setPersistenceEnabled(false)
-                        .build()
-            } catch (_: Exception) {}
+            // DO NOT call Firebase.firestore.firestoreSettings = Builder()...build() here.
+            // Builder() starts from DEFAULT settings (production host), which would overwrite the
+            // emulator host set above.  Persistence is already disabled by SRRApplication.
         }
     }
 
@@ -83,7 +83,7 @@ class MultiUserFlowTest {
         val conn = URL(urlStr).openConnection() as HttpURLConnection
         conn.requestMethod  = "DELETE"
         conn.connectTimeout = 3_000
-        conn.connect()
+        conn.responseCode   // triggers the request to be sent and waits for response
         conn.disconnect()
     }
 

@@ -3,12 +3,15 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Any signed-in user can read items and features.
-    // Any signed-in user can create new items/features; update and delete are blocked.
+    // create: auth required; createdBy must match the caller's uid; name 1–100 chars.
+    // delete: creator only (createdBy == uid).
     match /items/{itemId} {
       allow read:   if request.auth != null;
       allow create: if request.auth != null
                     && request.resource.data.name is string
-                    && request.resource.data.name.size() > 0;
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 100
+                    && request.resource.data.createdBy == request.auth.uid;
       allow delete: if request.auth != null
                     && resource.data.createdBy == request.auth.uid;
     }
@@ -17,15 +20,21 @@ service cloud.firestore {
       allow read:   if request.auth != null;
       allow create: if request.auth != null
                     && request.resource.data.name is string
-                    && request.resource.data.name.size() > 0;
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 100
+                    && request.resource.data.createdBy == request.auth.uid;
       allow delete: if request.auth != null
                     && resource.data.createdBy == request.auth.uid;
     }
 
-    // Evaluations: any signed-in user can read; user can only write their own document
+    // Evaluations: any signed-in user can read; user can only write their own document.
+    // orderedItemIds must be a non-empty list.
     match /evaluations/{featureId}/userEvaluations/{userId} {
       allow read:  if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.data.orderedItemIds is list
+                   && request.resource.data.orderedItemIds.size() > 0;
     }
   }
 }

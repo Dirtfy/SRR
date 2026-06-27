@@ -4,6 +4,7 @@ import com.dirtfy.srr.core.model.Item
 import com.dirtfy.srr.core.repository.ItemRepository
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
@@ -16,7 +17,7 @@ class RemoteItemRepository : ItemRepository {
         runCatching {
             db.collection("items")
                 .orderBy("createdAt", Query.Direction.ASCENDING)
-                .get().await()
+                .get(Source.SERVER).await()
                 .documents
                 .map { doc ->
                     Item(
@@ -29,14 +30,24 @@ class RemoteItemRepository : ItemRepository {
 
     override suspend fun createItem(name: String, createdBy: String): Result<Item> =
         runCatching {
+            val trimmed   = name.trim()
+            val nameLower = trimmed.lowercase()
+            // Source.SERVER bypasses in-memory cache (stale after emulator reset in tests)
+            // and reads the authoritative emulator/server state. Since setPersistenceEnabled(false)
+            // is set in SRRApplication, writes complete only after server ack, so this read
+            // immediately sees any document that was just written.
+            val all = db.collection("items").get(Source.SERVER).await()
+            if (all.documents.any { it.getString("nameLower") == nameLower })
+                throw IllegalArgumentException("An item named \"$trimmed\" already exists")
             val ref = db.collection("items")
                 .add(hashMapOf(
-                    "name"      to name,
+                    "name"      to trimmed,
+                    "nameLower" to nameLower,
                     "createdBy" to createdBy,
                     "createdAt" to FieldValue.serverTimestamp()
                 ))
                 .await()
-            Item(id = ref.id, name = name, createdBy = createdBy)
+            Item(id = ref.id, name = trimmed, createdBy = createdBy)
         }
 
     override suspend fun deleteItem(id: String): Result<Unit> =

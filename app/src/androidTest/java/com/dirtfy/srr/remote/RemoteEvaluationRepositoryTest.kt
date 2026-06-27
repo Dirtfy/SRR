@@ -43,16 +43,11 @@ class RemoteEvaluationRepositoryTest {
         @BeforeClass
         @JvmStatic
         fun setUpEmulators() {
+            // SRRApplication.onCreate() already calls setPersistenceEnabled(false) + useEmulator().
+            // DO NOT call firestoreSettings = Builder()...build() here — Builder() starts from
+            // DEFAULT (production) host, which would overwrite the emulator URL.
             try { Firebase.auth.useEmulator("localhost", 9099) } catch (_: Exception) {}
             try { Firebase.firestore.useEmulator("localhost", 8080) } catch (_: Exception) {}
-            // Must be in its own try-catch: useEmulator() above throws when already set,
-            // which would prevent setPersistenceEnabled from running inside the same block.
-            try {
-                Firebase.firestore.firestoreSettings =
-                    com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
-                        .setPersistenceEnabled(false)
-                        .build()
-            } catch (_: Exception) {}
         }
     }
 
@@ -88,7 +83,7 @@ class RemoteEvaluationRepositoryTest {
         val conn = URL(urlStr).openConnection() as HttpURLConnection
         conn.requestMethod = "DELETE"
         conn.connectTimeout = 3000
-        conn.connect()
+        conn.responseCode   // triggers the request to be sent and waits for response
         conn.disconnect()
     }
 

@@ -4,6 +4,7 @@ import com.dirtfy.srr.core.model.Feature
 import com.dirtfy.srr.core.repository.FeatureRepository
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
@@ -16,7 +17,7 @@ class RemoteFeatureRepository : FeatureRepository {
         runCatching {
             db.collection("features")
                 .orderBy("createdAt", Query.Direction.ASCENDING)
-                .get().await()
+                .get(Source.SERVER).await()
                 .documents
                 .map { doc ->
                     Feature(
@@ -29,14 +30,20 @@ class RemoteFeatureRepository : FeatureRepository {
 
     override suspend fun createFeature(name: String, createdBy: String): Result<Feature> =
         runCatching {
+            val trimmed   = name.trim()
+            val nameLower = trimmed.lowercase()
+            val all = db.collection("features").get(Source.SERVER).await()
+            if (all.documents.any { it.getString("nameLower") == nameLower })
+                throw IllegalArgumentException("A feature named \"$trimmed\" already exists")
             val ref = db.collection("features")
                 .add(hashMapOf(
-                    "name"      to name,
+                    "name"      to trimmed,
+                    "nameLower" to nameLower,
                     "createdBy" to createdBy,
                     "createdAt" to FieldValue.serverTimestamp()
                 ))
                 .await()
-            Feature(id = ref.id, name = name, createdBy = createdBy)
+            Feature(id = ref.id, name = trimmed, createdBy = createdBy)
         }
 
     override suspend fun deleteFeature(id: String): Result<Unit> =
