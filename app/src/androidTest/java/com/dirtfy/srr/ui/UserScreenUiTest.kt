@@ -1,0 +1,263 @@
+package com.dirtfy.srr.ui
+
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.dirtfy.srr.core.model.Feature
+import com.dirtfy.srr.core.model.Item
+import com.dirtfy.srr.core.model.ScoreMatrix
+import com.dirtfy.srr.ui.performer.user.UserScreen
+import com.dirtfy.srr.ui.performer.user.UserUiState
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * Compose UI tests for UserScreen (My tab).
+ *
+ * These are pure UI tests — no Firebase, no ViewModel.
+ * We build a UiState directly, set it via setContent, and assert what is rendered.
+ *
+ * Covers:
+ *  - Items tab: list, "Added by you" badge, delete button visibility
+ *  - Features tab: list, "Tap to evaluate" / "You evaluated" hints, evaluator counts
+ *  - Delete confirmation dialog appearance
+ *  - Add item / add feature dialogs
+ */
+@RunWith(AndroidJUnit4::class)
+class UserScreenUiTest {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    // ---------------------------------------------------------------------------
+    // Fixture helpers
+    // ---------------------------------------------------------------------------
+
+    private val emptyMatrix = ScoreMatrix(emptyMap(), emptyMap())
+
+    private val ownerUid    = "user_owner"
+    private val otherUid    = "user_other"
+    private val itemOwned   = Item("item_1", "Laptop",  createdBy = ownerUid)
+    private val itemForeign = Item("item_2", "Phone",   createdBy = otherUid)
+    private val featOwned   = Feature("feat_1", "Performance", createdBy = ownerUid)
+    private val featForeign = Feature("feat_2", "Stability",   createdBy = otherUid)
+
+    private fun readyState(
+        items:                  List<Item>    = listOf(itemOwned, itemForeign),
+        features:               List<Feature> = listOf(featOwned, featForeign),
+        currentUserId:          String        = ownerUid,
+        evaluatedFeatureIds:    Set<String>   = emptySet(),
+        evaluatorCountByFeature: Map<String, Int> = emptyMap(),
+        activeTab:              UserUiState.Tab   = UserUiState.Tab.ITEMS,
+        deleteConfirmation:     UserUiState.Ready.DeleteConfirmationState? = null,
+        addItemDialog:          UserUiState.Ready.AddItemDialogState? = null,
+        addFeatureDialog:       UserUiState.Ready.AddFeatureDialogState? = null
+    ) = UserUiState.Ready(
+        items                   = items,
+        features                = features,
+        scoreMatrix             = emptyMatrix,
+        currentUserId           = currentUserId,
+        evaluatedFeatureIds     = evaluatedFeatureIds,
+        evaluatorCountByFeature = evaluatorCountByFeature,
+        activeTab               = activeTab,
+        deleteConfirmation      = deleteConfirmation,
+        addItemDialog           = addItemDialog,
+        addFeatureDialog        = addFeatureDialog
+    )
+
+    private fun setScreen(state: UserUiState) {
+        composeTestRule.setContent {
+            UserScreen(
+                uiState                    = state,
+                onTabSelected              = {},
+                onItemSelected             = {},
+                onFeatureSelected          = {},
+                onOpenEditor               = {},
+                onEvaluationReorder        = {},
+                onSubmitEvaluation         = {},
+                onRetryTap                 = {},
+                onOpenAddItemDialog        = {},
+                onOpenAddFeatureDialog     = {},
+                onAddItemNameChange        = {},
+                onAddFeatureNameChange     = {},
+                onDismissAddDialog         = {},
+                onAddItem                  = {},
+                onAddFeature               = {},
+                onRequestDeleteItem        = { _, _ -> },
+                onRequestDeleteFeature     = { _, _ -> },
+                onConfirmDelete            = {},
+                onDismissDeleteConfirmation = {}
+            )
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Items tab
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun itemsTab_allItemNamesAreDisplayed() {
+        setScreen(readyState())
+        composeTestRule.onNodeWithText("Laptop").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Phone").assertIsDisplayed()
+    }
+
+    @Test
+    fun itemsTab_ownedItem_showsAddedByYouBadge() {
+        setScreen(readyState())
+        // "Added by you" must appear exactly for the owned item
+        composeTestRule.onAllNodesWithText("Added by you").assertCountEquals(1)
+    }
+
+    @Test
+    fun itemsTab_foreignItem_doesNotShowAddedByYou() {
+        setScreen(readyState(items = listOf(itemForeign), currentUserId = ownerUid))
+        composeTestRule.onAllNodesWithText("Added by you").assertCountEquals(0)
+    }
+
+    @Test
+    fun itemsTab_ownedItem_deleteButtonVisible_foreignItem_deleteButtonHidden() {
+        setScreen(readyState())
+        // Delete content-desc appears only for owned items
+        composeTestRule.onAllNodesWithContentDescription("Delete").assertCountEquals(1)
+    }
+
+    // ---------------------------------------------------------------------------
+    // Features tab
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun featuresTab_allFeatureNamesAreDisplayed() {
+        setScreen(readyState(activeTab = UserUiState.Tab.FEATURES))
+        composeTestRule.onNodeWithText("Performance").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Stability").assertIsDisplayed()
+    }
+
+    @Test
+    fun featuresTab_notEvaluated_showsTapToEvaluate() {
+        setScreen(readyState(
+            activeTab = UserUiState.Tab.FEATURES,
+            evaluatedFeatureIds = emptySet()
+        ))
+        // featForeign not evaluated → "Tap to evaluate" shown
+        // featOwned has "Added by you" which takes priority over "Tap to evaluate"
+        composeTestRule.onAllNodesWithText("Tap to evaluate").assertCountEquals(1)
+    }
+
+    @Test
+    fun featuresTab_evaluated_showsYouEvaluated() {
+        setScreen(readyState(
+            activeTab = UserUiState.Tab.FEATURES,
+            evaluatedFeatureIds = setOf(featOwned.id, featForeign.id)
+        ))
+        composeTestRule.onAllNodesWithText("You evaluated").assertCountEquals(2)
+    }
+
+    @Test
+    fun featuresTab_evaluatorCount_isDisplayed() {
+        setScreen(readyState(
+            activeTab = UserUiState.Tab.FEATURES,
+            evaluatorCountByFeature = mapOf(featOwned.id to 2, featForeign.id to 5)
+        ))
+        composeTestRule.onNodeWithText("2 evaluated").assertIsDisplayed()
+        composeTestRule.onNodeWithText("5 evaluated").assertIsDisplayed()
+    }
+
+    @Test
+    fun featuresTab_zeroEvaluators_showsZeroCount() {
+        setScreen(readyState(
+            activeTab = UserUiState.Tab.FEATURES,
+            evaluatorCountByFeature = emptyMap()
+        ))
+        // Both features have 0 evaluators → "0 evaluated" appears twice
+        composeTestRule.onAllNodesWithText("0 evaluated").assertCountEquals(2)
+    }
+
+    // ---------------------------------------------------------------------------
+    // Delete confirmation dialog
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun deleteConfirmationDialog_showsItemNameAndType() {
+        setScreen(readyState(
+            deleteConfirmation = UserUiState.Ready.DeleteConfirmationState(
+                id   = itemOwned.id,
+                name = itemOwned.name,
+                type = UserUiState.Ready.DeleteTargetType.ITEM
+            )
+        ))
+        composeTestRule.onNodeWithText("Delete Item?").assertIsDisplayed()
+        composeTestRule.onNodeWithText("\"Laptop\" will be permanently removed.").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Delete").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Cancel").assertIsDisplayed()
+    }
+
+    @Test
+    fun deleteConfirmationDialog_showsFeatureType() {
+        setScreen(readyState(
+            deleteConfirmation = UserUiState.Ready.DeleteConfirmationState(
+                id   = featOwned.id,
+                name = featOwned.name,
+                type = UserUiState.Ready.DeleteTargetType.FEATURE
+            )
+        ))
+        composeTestRule.onNodeWithText("Delete Feature?").assertIsDisplayed()
+        composeTestRule.onNodeWithText("\"Performance\" will be permanently removed.").assertIsDisplayed()
+    }
+
+    // ---------------------------------------------------------------------------
+    // Add item dialog
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun addItemDialog_showsTitleAndAddButton() {
+        setScreen(readyState(
+            addItemDialog = UserUiState.Ready.AddItemDialogState(name = "")
+        ))
+        composeTestRule.onNodeWithText("Add Item").assertIsDisplayed()
+        // "Add" button exists (disabled when name is blank, but still rendered)
+        composeTestRule.onNodeWithText("Add").assertExists()
+        composeTestRule.onNodeWithText("Cancel").assertIsDisplayed()
+    }
+
+    @Test
+    fun addItemDialog_withName_addButtonExists() {
+        setScreen(readyState(
+            addItemDialog = UserUiState.Ready.AddItemDialogState(name = "Tablet")
+        ))
+        composeTestRule.onNodeWithText("Add").assertIsDisplayed()
+    }
+
+    // ---------------------------------------------------------------------------
+    // Add feature dialog
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun addFeatureDialog_showsTitleAndAddButton() {
+        setScreen(readyState(
+            addFeatureDialog = UserUiState.Ready.AddFeatureDialogState(name = "")
+        ))
+        composeTestRule.onNodeWithText("Add Feature").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Add").assertExists()
+        composeTestRule.onNodeWithText("Cancel").assertIsDisplayed()
+    }
+
+    // ---------------------------------------------------------------------------
+    // Loading / Error states
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun loadingState_showsProgressIndicator() {
+        setScreen(UserUiState.Loading)
+        composeTestRule.onNodeWithContentDescription("Circular progress indicator")
+            .assertExists()
+    }
+
+    @Test
+    fun errorState_showsMessageAndRetryButton() {
+        setScreen(UserUiState.Error("Network error"))
+        composeTestRule.onNodeWithText("Network error").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Retry").assertIsDisplayed()
+    }
+}
