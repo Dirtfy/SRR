@@ -76,7 +76,9 @@ class UserFragment : BaseFragment() {
             onAddFeatureNameChange = viewModel::onAddFeatureNameChange,
             onDismissAddDialog     = viewModel::onDismissAddDialog,
             onAddItem              = viewModel::onAddItem,
-            onAddFeature           = viewModel::onAddFeature
+            onAddFeature           = viewModel::onAddFeature,
+            onDeleteItem           = viewModel::onDeleteItem,
+            onDeleteFeature        = viewModel::onDeleteFeature
         )
     }
 }

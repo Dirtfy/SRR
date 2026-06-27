@@ -9,6 +9,8 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.name is string
                     && request.resource.data.name.size() > 0;
+      allow delete: if request.auth != null
+                    && resource.data.createdBy == request.auth.uid;
     }
 
     match /features/{featureId} {
@@ -16,6 +18,8 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.name is string
                     && request.resource.data.name.size() > 0;
+      allow delete: if request.auth != null
+                    && resource.data.createdBy == request.auth.uid;
     }
 
     // Evaluations: any signed-in user can read; user can only write their own document

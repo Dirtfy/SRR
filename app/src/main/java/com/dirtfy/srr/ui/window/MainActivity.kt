@@ -29,7 +29,7 @@ class MainActivity : FragmentActivity() {
         setContentView(rootContainer)
 
         if (savedInstanceState == null) {
-            navigateToFragment(LoginFragment(), addToBackStack = false)
+            navigateToFragment(LoginFragment.newInstance(autoLogin = true), addToBackStack = false)
         }
     }
 
@@ -43,7 +43,7 @@ class MainActivity : FragmentActivity() {
 
     fun signOut() {
         Firebase.auth.signOut()
-        logout()
+        navigateToFragment(LoginFragment.newInstance(autoLogin = false), addToBackStack = false)
     }
 
     private fun navigateToFragment(fragment: Fragment, addToBackStack: Boolean = true) {

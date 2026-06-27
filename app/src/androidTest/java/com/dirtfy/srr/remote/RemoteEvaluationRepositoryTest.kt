@@ -2,6 +2,7 @@ package com.dirtfy.srr.remote
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.dirtfy.srr.core.model.Evaluation
+import com.dirtfy.srr.core.scoring.DefaultFeatureScoringEngine
 import com.dirtfy.srr.remote.repository.RemoteEvaluationRepository
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.ktx.auth
@@ -143,6 +144,49 @@ class RemoteEvaluationRepositoryTest {
         val uids = evaluations.map { it.userId }.toSet()
         assertTrue("uidA must be present", uidA in uids)
         assertTrue("uidB must be present", uidB in uids)
+    }
+
+    @Test
+    fun threeUsersEvaluate_scoreExceedsThreshold() = runBlocking {
+        val featureId = "feature_threshold"
+        val allItemIds = listOf("item_a", "item_b", "item_c")
+
+        // User A: A > B > C
+        Firebase.auth.createUserWithEmailAndPassword("threshA@test.com", "password123").await()
+        val uidA = Firebase.auth.currentUser!!.uid
+        repository.submitEvaluation(Evaluation(uidA, featureId, listOf("item_a", "item_b", "item_c"))).getOrThrow()
+        Firebase.auth.signOut()
+
+        // User B: B > A > C
+        Firebase.auth.createUserWithEmailAndPassword("threshB@test.com", "password123").await()
+        val uidB = Firebase.auth.currentUser!!.uid
+        repository.submitEvaluation(Evaluation(uidB, featureId, listOf("item_b", "item_a", "item_c"))).getOrThrow()
+        Firebase.auth.signOut()
+
+        // User C: A > C > B
+        Firebase.auth.createUserWithEmailAndPassword("threshC@test.com", "password123").await()
+        val uidC = Firebase.auth.currentUser!!.uid
+        repository.submitEvaluation(Evaluation(uidC, featureId, listOf("item_a", "item_c", "item_b"))).getOrThrow()
+
+        val evaluations = repository.getEvaluationsForFeature(featureId).getOrThrow()
+        assertEquals("All three evaluations must be stored", 3, evaluations.size)
+
+        // Run scoring engine inline to confirm scores are non-null (threshold=3 is met)
+        val engine = DefaultFeatureScoringEngine()
+        val matrix = engine.computeScores(
+            allItemIds           = allItemIds,
+            allFeatureIds        = listOf(featureId),
+            evaluationsByFeature = mapOf(featureId to evaluations),
+            minVoteThreshold     = 3
+        )
+        val scoreA = matrix.scores["item_a"]?.get(featureId)
+        val scoreB = matrix.scores["item_b"]?.get(featureId)
+        val scoreC = matrix.scores["item_c"]?.get(featureId)
+        assertNotNull("item_a score must be non-null when threshold is met", scoreA)
+        assertNotNull("item_b score must be non-null when threshold is met", scoreB)
+        assertNotNull("item_c score must be non-null when threshold is met", scoreC)
+        // item_a ranked first by 2/3 users — should have the highest score
+        assertTrue("item_a should outrank item_c", scoreA!! > scoreC!!)
     }
 
     @Test

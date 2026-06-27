@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -41,7 +42,9 @@ fun UserScreen(
     onAddFeatureNameChange: (String) -> Unit,
     onDismissAddDialog: () -> Unit,
     onAddItem: () -> Unit,
-    onAddFeature: () -> Unit
+    onAddFeature: () -> Unit,
+    onDeleteItem: (String) -> Unit,
+    onDeleteFeature: (String) -> Unit
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         when (uiState) {
@@ -70,7 +73,9 @@ fun UserScreen(
                     onEvaluationReorder    = onEvaluationReorder,
                     onSubmitEvaluation     = onSubmitEvaluation,
                     onOpenAddItemDialog    = onOpenAddItemDialog,
-                    onOpenAddFeatureDialog = onOpenAddFeatureDialog
+                    onOpenAddFeatureDialog = onOpenAddFeatureDialog,
+                    onDeleteItem           = onDeleteItem,
+                    onDeleteFeature        = onDeleteFeature
                 )
                 uiState.addItemDialog?.let { dialog ->
                     AddDialog(
@@ -113,7 +118,9 @@ private fun UserReadyContent(
     onEvaluationReorder: (List<String>) -> Unit,
     onSubmitEvaluation: () -> Unit,
     onOpenAddItemDialog: () -> Unit,
-    onOpenAddFeatureDialog: () -> Unit
+    onOpenAddFeatureDialog: () -> Unit,
+    onDeleteItem: (String) -> Unit,
+    onDeleteFeature: (String) -> Unit
 ) {
     when {
         state.evaluationEditor != null -> {
@@ -147,7 +154,9 @@ private fun UserReadyContent(
                 onItemSelected         = onItemSelected,
                 onFeatureSelected      = onFeatureSelected,
                 onOpenAddItemDialog    = onOpenAddItemDialog,
-                onOpenAddFeatureDialog = onOpenAddFeatureDialog
+                onOpenAddFeatureDialog = onOpenAddFeatureDialog,
+                onDeleteItem           = onDeleteItem,
+                onDeleteFeature        = onDeleteFeature
             )
         }
     }
@@ -164,7 +173,9 @@ private fun UserTabContent(
     onItemSelected: (Item) -> Unit,
     onFeatureSelected: (Feature) -> Unit,
     onOpenAddItemDialog: () -> Unit,
-    onOpenAddFeatureDialog: () -> Unit
+    onOpenAddFeatureDialog: () -> Unit,
+    onDeleteItem: (String) -> Unit,
+    onDeleteFeature: (String) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         PrimaryTabRow(selectedTabIndex = state.activeTab.ordinal) {
@@ -180,9 +191,11 @@ private fun UserTabContent(
         when (state.activeTab) {
             UserUiState.Tab.ITEMS -> {
                 ItemsTabContent(
-                    items          = state.items,
+                    items         = state.items,
+                    currentUserId = state.currentUserId,
                     onItemSelected = onItemSelected,
-                    onAddClick     = onOpenAddItemDialog
+                    onAddClick    = onOpenAddItemDialog,
+                    onDeleteItem  = onDeleteItem
                 )
             }
             UserUiState.Tab.FEATURES -> {
@@ -190,8 +203,10 @@ private fun UserTabContent(
                     features          = state.features,
                     items             = state.items,
                     matrix            = state.scoreMatrix,
+                    currentUserId     = state.currentUserId,
                     onFeatureSelected = onFeatureSelected,
-                    onAddClick        = onOpenAddFeatureDialog
+                    onAddClick        = onOpenAddFeatureDialog,
+                    onDeleteFeature   = onDeleteFeature
                 )
             }
         }
@@ -205,8 +220,10 @@ private fun UserTabContent(
 @Composable
 private fun ItemsTabContent(
     items: List<Item>,
+    currentUserId: String,
     onItemSelected: (Item) -> Unit,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
+    onDeleteItem: (String) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -214,8 +231,15 @@ private fun ItemsTabContent(
             contentPadding = PaddingValues(bottom = 88.dp)
         ) {
             items(items, key = { it.id }) { item ->
+                val isOwner = item.createdBy == currentUserId && currentUserId.isNotEmpty()
                 ListItem(
-                    headlineContent = { Text(item.name) },
+                    headlineContent    = { Text(item.name) },
+                    supportingContent  = if (isOwner) { { Text("Added by you", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } } else null,
+                    trailingContent    = if (isOwner) { {
+                        IconButton(onClick = { onDeleteItem(item.id) }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                        }
+                    } } else null,
                     modifier = Modifier.clickableItem { onItemSelected(item) }
                 )
                 HorizontalDivider()
@@ -241,8 +265,10 @@ private fun FeaturesTabContent(
     features: List<Feature>,
     items: List<Item>,
     matrix: ScoreMatrix,
+    currentUserId: String,
     onFeatureSelected: (Feature) -> Unit,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
+    onDeleteFeature: (String) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -253,9 +279,20 @@ private fun FeaturesTabContent(
                 val ratedCount = items.count { item ->
                     matrix.scores[item.id]?.get(feature.id) != null
                 }
+                val isOwner = feature.createdBy == currentUserId && currentUserId.isNotEmpty()
                 ListItem(
-                    headlineContent = { Text(feature.name) },
-                    trailingContent = { Text("$ratedCount/${items.size}") },
+                    headlineContent   = { Text(feature.name) },
+                    supportingContent = if (isOwner) { { Text("Added by you", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } } else null,
+                    trailingContent   = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("$ratedCount/${items.size}", style = MaterialTheme.typography.bodyMedium)
+                            if (isOwner) {
+                                IconButton(onClick = { onDeleteFeature(feature.id) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        }
+                    },
                     modifier = Modifier.clickableItem { onFeatureSelected(feature) }
                 )
                 HorizontalDivider()

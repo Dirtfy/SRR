@@ -416,3 +416,70 @@ File: `ui/performer/user/Screen.kt`
 - [x] In `ItemsTabContent`: wrap content in `Box`; add `FloatingActionButton` at `Alignment.BottomEnd` (`Icons.Default.Add`) calling `onOpenAddItemDialog`
 - [x] In `FeaturesTabContent`: same FAB pattern calling `onOpenAddFeatureDialog`
 - [x] `AddItemAlertDialog` / `AddFeatureAlertDialog`: `AlertDialog` with `OutlinedTextField`, confirm button enabled only when `name.isNotBlank() && !isSaving`, spinner in confirm button while `isSaving`, error text below field when `error != null`
+
+---
+
+## Phase 7 — Creator Tracking, Delete, and Bug Fixes
+
+**Step 34: Preserve active tab across data reloads**
+
+File: `ui/performer/user/UserViewModel.kt`
+
+- [x] Capture `activeTab` from current `Ready` state before emitting `Loading` in `loadAllData()`; restore it in the new `Ready` state so the UI stays on the Features tab after adding a feature
+
+**Step 35: Fix debug auto-login undoing sign-out**
+
+Files: `ui/window/component/LoginFragment.kt`, `ui/performer/login/Screen.kt`, `ui/window/MainActivity.kt`
+
+- [x] Add `LoginFragment.newInstance(autoLogin: Boolean)` factory; store flag in `arguments`
+- [x] `LoginScreen` accepts `autoLogin: Boolean`; only calls `debugAutoLogin()` when `true`
+- [x] `MainActivity.signOut()` uses `LoginFragment.newInstance(autoLogin = false)`
+
+**Step 36: Add `createdBy` field to domain models and Firestore**
+
+Files: `core/model/Item.kt`, `core/model/Feature.kt`, `remote/repository/RemoteItemRepository.kt`, `remote/repository/RemoteFeatureRepository.kt`
+
+- [x] `Item(id, name, createdBy: String = "")` — default for backward compat with existing docs
+- [x] `Feature(id, name, createdBy: String = "")`
+- [x] `RemoteItemRepository.getAllItems()` — read `createdBy` field
+- [x] `RemoteFeatureRepository.getAllFeatures()` — read `createdBy` field
+- [x] `RemoteItemRepository.createItem(name, createdBy)` — write `createdBy` to Firestore
+- [x] `RemoteFeatureRepository.createFeature(name, createdBy)` — write `createdBy` to Firestore
+
+**Step 37: Add delete to repository interfaces and remote implementations**
+
+Files: `core/repository/ItemRepository.kt`, `core/repository/FeatureRepository.kt`, `remote/repository/RemoteItemRepository.kt`, `remote/repository/RemoteFeatureRepository.kt`
+
+- [x] `ItemRepository.deleteItem(id: String): Result<Unit>`
+- [x] `FeatureRepository.deleteFeature(id: String): Result<Unit>`
+- [x] `RemoteItemRepository.deleteItem` — `db.collection("items").document(id).delete().await()`
+- [x] `RemoteFeatureRepository.deleteFeature` — `db.collection("features").document(id).delete().await()`
+
+**Step 38: Update Firestore security rules**
+
+File: `firestore.rules`
+
+- [x] Add `allow delete: if request.auth != null && resource.data.createdBy == request.auth.uid` to `items` and `features` rules
+
+**Step 39: Wire delete in UserViewModel**
+
+File: `ui/performer/user/UserViewModel.kt`
+
+- [x] Pass `currentUserId` to `createItem` and `createFeature` calls
+- [x] Add `onDeleteItem(id: String)` — calls `itemRepository.deleteItem(id)`, on success `loadAllData()`
+- [x] Add `onDeleteFeature(id: String)` — calls `featureRepository.deleteFeature(id)`, on success `loadAllData()`
+
+**Step 40: Update User Screen UI**
+
+Files: `ui/performer/user/Screen.kt`, `ui/window/component/UserFragment.kt`
+
+- [x] Pass `currentUserId` into `ItemsTabContent` and `FeaturesTabContent`
+- [x] `ListItem` for items: `supportingContent = "Added by you"` when owned; trailing `IconButton(Icons.Default.Delete)` when owned
+- [x] `ListItem` for features: same pattern; count and delete button coexist in trailing `Row`
+- [x] Wire `onDeleteItem` and `onDeleteFeature` from `UserFragment`
+
+**Step 41: Add instrumented test for evaluation threshold**
+
+File: `app/src/androidTest/.../RemoteEvaluationRepositoryTest.kt`
+
+- [x] `threeUsersEvaluate_scoreExceedsThreshold`: create 3 users, each submits evaluation for same feature, retrieve all 3, run `DefaultFeatureScoringEngine` inline, assert computed score is non-null

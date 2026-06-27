@@ -17,17 +17,23 @@ class RemoteItemRepository : ItemRepository {
                 .documents
                 .map { doc ->
                     Item(
-                        id   = doc.id,
-                        name = doc.getString("name") ?: doc.id
+                        id        = doc.id,
+                        name      = doc.getString("name") ?: doc.id,
+                        createdBy = doc.getString("createdBy") ?: ""
                     )
                 }
         }
 
-    override suspend fun createItem(name: String): Result<Item> =
+    override suspend fun createItem(name: String, createdBy: String): Result<Item> =
         runCatching {
             val ref = db.collection("items")
-                .add(hashMapOf("name" to name))
+                .add(hashMapOf("name" to name, "createdBy" to createdBy))
                 .await()
-            Item(id = ref.id, name = name)
+            Item(id = ref.id, name = name, createdBy = createdBy)
+        }
+
+    override suspend fun deleteItem(id: String): Result<Unit> =
+        runCatching {
+            db.collection("items").document(id).delete().await()
         }
 }

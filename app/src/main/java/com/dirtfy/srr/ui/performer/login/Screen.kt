@@ -29,15 +29,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
+    autoLogin: Boolean = true,
     onLoginSuccess: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Auto-login: Firebase Auth caches session → immediate navigation.
-    // In debug builds, also auto-signs-in with the shared debug account.
+    // In debug builds, also auto-signs-in with the shared debug account
+    // unless autoLogin=false (set when coming from an explicit sign-out).
     LaunchedEffect(Unit) {
         if (viewModel.isAlreadySignedIn()) onLoginSuccess()
-        else viewModel.debugAutoLogin()
+        else if (autoLogin) viewModel.debugAutoLogin()
     }
 
     LaunchedEffect(uiState.isLoginSuccess) {

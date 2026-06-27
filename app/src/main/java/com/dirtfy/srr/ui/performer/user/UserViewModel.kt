@@ -32,7 +32,6 @@ class UserViewModel(
     private val _uiState = MutableStateFlow<UserUiState>(UserUiState.Loading)
     val uiState: StateFlow<UserUiState> = _uiState.asStateFlow()
 
-    // Raw evaluations cached so the editor can pre-populate without an extra Firestore call
     private var cachedEvaluations: Map<String, List<Evaluation>> = emptyMap()
 
     init {
@@ -40,6 +39,7 @@ class UserViewModel(
     }
 
     fun loadAllData() {
+        val previousTab = (_uiState.value as? UserUiState.Ready)?.activeTab ?: UserUiState.Tab.ITEMS
         viewModelScope.launch {
             _uiState.value = UserUiState.Loading
             loadFeatureScoresUseCase.execute()
@@ -50,11 +50,12 @@ class UserViewModel(
                         .filterValues { evals -> evals.any { it.userId == userId } }
                         .keys
                     _uiState.value = UserUiState.Ready(
-                        items                = output.items,
-                        features             = output.features,
-                        scoreMatrix          = output.scoreMatrix,
-                        currentUserId        = userId,
-                        evaluatedFeatureIds  = evaluatedFeatureIds
+                        items               = output.items,
+                        features            = output.features,
+                        scoreMatrix         = output.scoreMatrix,
+                        currentUserId       = userId,
+                        evaluatedFeatureIds = evaluatedFeatureIds,
+                        activeTab           = previousTab
                     )
                 }
                 .onFailure { e -> _uiState.value = UserUiState.Error(e.message ?: "Failed to load") }
@@ -63,13 +64,12 @@ class UserViewModel(
 
     fun onRetryTap() = loadAllData()
 
-    // Debator fix #5: clear selections when switching tabs
     fun onTabSelected(tab: UserUiState.Tab) {
         (_uiState.value as? UserUiState.Ready)?.let {
             _uiState.value = it.copy(
-                activeTab       = tab,
-                selectedItem    = null,
-                selectedFeature = null,
+                activeTab        = tab,
+                selectedItem     = null,
+                selectedFeature  = null,
                 evaluationEditor = null
             )
         }
@@ -156,7 +156,7 @@ class UserViewModel(
         val dialog = state.addItemDialog ?: return
         _uiState.value = state.copy(addItemDialog = dialog.copy(isSaving = true, error = null))
         viewModelScope.launch {
-            itemRepository.createItem(dialog.name.trim())
+            itemRepository.createItem(dialog.name.trim(), state.currentUserId)
                 .onSuccess { loadAllData() }
                 .onFailure { e ->
                     val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
@@ -171,13 +171,25 @@ class UserViewModel(
         val dialog = state.addFeatureDialog ?: return
         _uiState.value = state.copy(addFeatureDialog = dialog.copy(isSaving = true, error = null))
         viewModelScope.launch {
-            featureRepository.createFeature(dialog.name.trim())
+            featureRepository.createFeature(dialog.name.trim(), state.currentUserId)
                 .onSuccess { loadAllData() }
                 .onFailure { e ->
                     val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
                     val current = s.addFeatureDialog ?: return@onFailure
                     _uiState.value = s.copy(addFeatureDialog = current.copy(isSaving = false, error = e.message))
                 }
+        }
+    }
+
+    fun onDeleteItem(id: String) {
+        viewModelScope.launch {
+            itemRepository.deleteItem(id).onSuccess { loadAllData() }
+        }
+    }
+
+    fun onDeleteFeature(id: String) {
+        viewModelScope.launch {
+            featureRepository.deleteFeature(id).onSuccess { loadAllData() }
         }
     }
 

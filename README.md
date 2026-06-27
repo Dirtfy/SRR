@@ -13,7 +13,7 @@ A collaborative feature-strength evaluation app. Users order items by how strong
 
 ## App Behavior
 
-**Item and feature management:** Any signed-in user may add new items and features to the catalogue. Items and features are visible to all users once created and cannot be renamed or deleted through the app.
+**Item and feature management:** Any signed-in user may add new items and features to the shared catalogue. Items and features are visible to all users once created. A user may delete only the items and features they personally created; renaming is not supported. The UI labels each entry the current user owns with an "Added by you" hint and exposes a delete action for those entries only.
 
 **User input:** For each feature, the user orders all items from strongest feature presence (index 0) to weakest (last). Evaluating every item is encouraged but not required — unevaluated items are excluded from that feature's score entirely.
 
@@ -54,4 +54,5 @@ Average then remap to `[0, 10]`:
 | 3 | Bad actor contamination | **Deferred** post-launch | Vote threshold (decision 4) provides partial protection |
 | 4 | Score visibility threshold | Hide score until **N = 3** users have evaluated that item-feature pair; show `—` in UI | Minimum sample to make a mean meaningful without blocking early usage |
 | 5 | Score storage | Scores are computed **on-demand** — never written to Firestore | Avoids stale-score bugs; storage cost is low since re-computation is cheap |
-| 6 | Item/feature write access | Any authenticated user may **create** items and features; update and delete are blocked | Enables crowd-sourced catalogue growth without moderation overhead |
+| 6 | Item/feature write access | Any authenticated user may **create** items and features; **delete** is allowed only by the creator (`createdBy == request.auth.uid`); rename/update are blocked | Crowd-sourced growth; creator can correct mistakes without moderator overhead |
+| 7 | Creator identity display | Show "Added by you" label for entries owned by the current user; no label otherwise | Avoids exposing other users' UIDs; sufficient to guide the delete action |

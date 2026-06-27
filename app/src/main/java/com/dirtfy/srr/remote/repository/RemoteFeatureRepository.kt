@@ -17,17 +17,23 @@ class RemoteFeatureRepository : FeatureRepository {
                 .documents
                 .map { doc ->
                     Feature(
-                        id   = doc.id,
-                        name = doc.getString("name") ?: doc.id
+                        id        = doc.id,
+                        name      = doc.getString("name") ?: doc.id,
+                        createdBy = doc.getString("createdBy") ?: ""
                     )
                 }
         }
 
-    override suspend fun createFeature(name: String): Result<Feature> =
+    override suspend fun createFeature(name: String, createdBy: String): Result<Feature> =
         runCatching {
             val ref = db.collection("features")
-                .add(hashMapOf("name" to name))
+                .add(hashMapOf("name" to name, "createdBy" to createdBy))
                 .await()
-            Feature(id = ref.id, name = name)
+            Feature(id = ref.id, name = name, createdBy = createdBy)
+        }
+
+    override suspend fun deleteFeature(id: String): Result<Unit> =
+        runCatching {
+            db.collection("features").document(id).delete().await()
         }
 }
