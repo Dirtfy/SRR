@@ -101,6 +101,7 @@ Debator reviews → Developer fixes CRITICALs
 4. **Push gate (instrumented tests):** Push to remote only after Tester runs instrumented tests and they pass. Do not push on unit-test pass alone.
 5. **Instrumented tests:** Run `./gradlew connectedDebugAndroidTest` only when the user says a device or AVD is connected. If they pass, push all local commits.
    - **Device preference order:** Always use a connected physical device first. Only fall back to AVD if no physical device is available (`adb devices` shows no device).
+   - **Multi-device guard:** If both a physical device and AVD are connected, set `$env:ANDROID_SERIAL = "<serial>"` to the physical device serial before running. Running on multiple devices simultaneously causes Firebase emulator account-creation collisions.
    - Physical device: run `adb reverse tcp:8080 tcp:8080 && adb reverse tcp:9099 tcp:9099` first (Firebase emulator ADB forwarding).
    - AVD: use `10.0.2.2` instead of `localhost` to reach host emulators.
 

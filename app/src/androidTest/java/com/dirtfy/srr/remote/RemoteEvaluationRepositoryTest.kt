@@ -28,6 +28,11 @@ import org.junit.runner.RunWith
  * Physical device: run `adb reverse tcp:8080 tcp:8080 && adb reverse tcp:9099 tcp:9099` first.
  * AVD: replace localhost with 10.0.2.2 (AVD routes that address to the host).
  *
+ * IMPORTANT: Run on ONE device at a time. If both a physical device and an AVD are connected,
+ * set ANDROID_SERIAL to the target serial before running, e.g.:
+ *   $env:ANDROID_SERIAL = "R3CX50BXZVD"; ./gradlew connectedDebugAndroidTest
+ * Running on multiple devices simultaneously causes account-creation collisions in the emulator.
+ *
  * Run via:  ./gradlew connectedDebugAndroidTest
  */
 @RunWith(AndroidJUnit4::class)
