@@ -1,3 +1,6 @@
+import java.net.HttpURLConnection
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -43,6 +46,37 @@ android {
 
 tasks.register("testClasses") {
     dependsOn("compileDebugUnitTestSources")
+}
+
+// Clears Firebase Local Emulator Auth + Firestore data from the host before
+// instrumented tests run. Prevents account-collision failures when ADB reverse
+// drops between runs and the device-side teardown can't reach the emulator.
+tasks.register("clearFirebaseEmulator") {
+    doLast {
+        val projectId = "shared-relative-rank"
+        listOf(
+            "http://localhost:9099/emulator/v1/projects/$projectId/accounts",
+            "http://localhost:8080/emulator/v1/projects/$projectId/databases/(default)/documents"
+        ).forEach { url ->
+            try {
+                val conn = URI(url).toURL().openConnection() as HttpURLConnection
+                conn.requestMethod = "DELETE"
+                conn.connectTimeout = 3000
+                conn.connect()
+                val code = conn.responseCode
+                conn.disconnect()
+                println("Cleared $url — HTTP $code")
+            } catch (e: Exception) {
+                println("Emulator not reachable at $url — skipping (${e.message})")
+            }
+        }
+    }
+}
+
+tasks.whenTaskAdded {
+    if (name == "connectedDebugAndroidTest") {
+        dependsOn("clearFirebaseEmulator")
+    }
 }
 
 dependencies {
