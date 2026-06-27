@@ -75,10 +75,12 @@ class UserFragment : BaseFragment() {
             onAddItemNameChange    = viewModel::onAddItemNameChange,
             onAddFeatureNameChange = viewModel::onAddFeatureNameChange,
             onDismissAddDialog     = viewModel::onDismissAddDialog,
-            onAddItem              = viewModel::onAddItem,
-            onAddFeature           = viewModel::onAddFeature,
-            onDeleteItem           = viewModel::onDeleteItem,
-            onDeleteFeature        = viewModel::onDeleteFeature
+            onAddItem                     = viewModel::onAddItem,
+            onAddFeature                  = viewModel::onAddFeature,
+            onRequestDeleteItem           = viewModel::onRequestDeleteItem,
+            onRequestDeleteFeature        = viewModel::onRequestDeleteFeature,
+            onConfirmDelete               = viewModel::onConfirmDelete,
+            onDismissDeleteConfirmation   = viewModel::onDismissDeleteConfirmation
         )
     }
 }

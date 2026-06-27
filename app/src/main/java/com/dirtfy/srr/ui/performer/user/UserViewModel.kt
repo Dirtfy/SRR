@@ -49,13 +49,21 @@ class UserViewModel(
                     val evaluatedFeatureIds = output.evaluationsByFeature
                         .filterValues { evals -> evals.any { it.userId == userId } }
                         .keys
+                    val myEvaluationByFeature = output.evaluationsByFeature
+                        .mapValues { (_, evals) ->
+                            evals.find { it.userId == userId }?.orderedItemIds ?: emptyList()
+                        }
+                    val evaluatorCountByFeature = output.evaluationsByFeature
+                        .mapValues { (_, evals) -> evals.size }
                     _uiState.value = UserUiState.Ready(
-                        items               = output.items,
-                        features            = output.features,
-                        scoreMatrix         = output.scoreMatrix,
-                        currentUserId       = userId,
-                        evaluatedFeatureIds = evaluatedFeatureIds,
-                        activeTab           = previousTab
+                        items                    = output.items,
+                        features                 = output.features,
+                        scoreMatrix              = output.scoreMatrix,
+                        currentUserId            = userId,
+                        evaluatedFeatureIds      = evaluatedFeatureIds,
+                        myEvaluationByFeature    = myEvaluationByFeature,
+                        evaluatorCountByFeature  = evaluatorCountByFeature,
+                        activeTab                = previousTab
                     )
                 }
                 .onFailure { e -> _uiState.value = UserUiState.Error(e.message ?: "Failed to load") }
@@ -181,15 +189,45 @@ class UserViewModel(
         }
     }
 
-    fun onDeleteItem(id: String) {
-        viewModelScope.launch {
-            itemRepository.deleteItem(id).onSuccess { loadAllData() }
+    fun onRequestDeleteItem(id: String, name: String) {
+        (_uiState.value as? UserUiState.Ready)?.let {
+            _uiState.value = it.copy(
+                deleteConfirmation = UserUiState.Ready.DeleteConfirmationState(
+                    id   = id,
+                    name = name,
+                    type = UserUiState.Ready.DeleteTargetType.ITEM
+                )
+            )
         }
     }
 
-    fun onDeleteFeature(id: String) {
+    fun onRequestDeleteFeature(id: String, name: String) {
+        (_uiState.value as? UserUiState.Ready)?.let {
+            _uiState.value = it.copy(
+                deleteConfirmation = UserUiState.Ready.DeleteConfirmationState(
+                    id   = id,
+                    name = name,
+                    type = UserUiState.Ready.DeleteTargetType.FEATURE
+                )
+            )
+        }
+    }
+
+    fun onDismissDeleteConfirmation() {
+        (_uiState.value as? UserUiState.Ready)?.let {
+            _uiState.value = it.copy(deleteConfirmation = null)
+        }
+    }
+
+    fun onConfirmDelete() {
+        val state = _uiState.value as? UserUiState.Ready ?: return
+        val target = state.deleteConfirmation ?: return
+        _uiState.value = state.copy(deleteConfirmation = null)
         viewModelScope.launch {
-            featureRepository.deleteFeature(id).onSuccess { loadAllData() }
+            when (target.type) {
+                UserUiState.Ready.DeleteTargetType.ITEM    -> itemRepository.deleteItem(target.id)
+                UserUiState.Ready.DeleteTargetType.FEATURE -> featureRepository.deleteFeature(target.id)
+            }.onSuccess { loadAllData() }
         }
     }
 

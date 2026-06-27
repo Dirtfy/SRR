@@ -13,12 +13,17 @@ sealed class UserUiState {
         val scoreMatrix: ScoreMatrix,
         val currentUserId: String,
         val evaluatedFeatureIds: Set<String> = emptySet(),
+        // featureId → current user's personally ranked item-id list (empty if not evaluated)
+        val myEvaluationByFeature: Map<String, List<String>> = emptyMap(),
+        // featureId → total number of users who submitted an evaluation
+        val evaluatorCountByFeature: Map<String, Int> = emptyMap(),
         val activeTab: Tab = Tab.ITEMS,
         val selectedItem: Item? = null,
         val selectedFeature: Feature? = null,
         val evaluationEditor: EvaluationEditorState? = null,
         val addItemDialog: AddItemDialogState? = null,
-        val addFeatureDialog: AddFeatureDialogState? = null
+        val addFeatureDialog: AddFeatureDialogState? = null,
+        val deleteConfirmation: DeleteConfirmationState? = null
     ) : UserUiState() {
 
         data class EvaluationEditorState(
@@ -38,6 +43,13 @@ sealed class UserUiState {
             val name: String = "",
             val isSaving: Boolean = false,
             val error: String? = null
+        )
+
+        enum class DeleteTargetType { ITEM, FEATURE }
+        data class DeleteConfirmationState(
+            val id: String,
+            val name: String,
+            val type: DeleteTargetType
         )
     }
 

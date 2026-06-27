@@ -2,6 +2,8 @@ package com.dirtfy.srr.remote.repository
 
 import com.dirtfy.srr.core.model.Feature
 import com.dirtfy.srr.core.repository.FeatureRepository
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
@@ -13,6 +15,7 @@ class RemoteFeatureRepository : FeatureRepository {
     override suspend fun getAllFeatures(): Result<List<Feature>> =
         runCatching {
             db.collection("features")
+                .orderBy("createdAt", Query.Direction.ASCENDING)
                 .get().await()
                 .documents
                 .map { doc ->
@@ -27,7 +30,11 @@ class RemoteFeatureRepository : FeatureRepository {
     override suspend fun createFeature(name: String, createdBy: String): Result<Feature> =
         runCatching {
             val ref = db.collection("features")
-                .add(hashMapOf("name" to name, "createdBy" to createdBy))
+                .add(hashMapOf(
+                    "name"      to name,
+                    "createdBy" to createdBy,
+                    "createdAt" to FieldValue.serverTimestamp()
+                ))
                 .await()
             Feature(id = ref.id, name = name, createdBy = createdBy)
         }
