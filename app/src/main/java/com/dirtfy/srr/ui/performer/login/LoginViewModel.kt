@@ -3,6 +3,7 @@ package com.dirtfy.srr.ui.performer.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.dirtfy.srr.BuildConfig
 import com.dirtfy.srr.core.repository.UserAccountRepository
 import com.dirtfy.srr.remote.repository.RemoteUserAccountRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,7 +51,24 @@ class LoginViewModel(
 
     fun isAlreadySignedIn(): Boolean = userAccountRepository.currentUserId() != null
 
+    fun debugAutoLogin() {
+        if (!BuildConfig.DEBUG) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            userAccountRepository.signIn(DEBUG_EMAIL, DEBUG_PASSWORD)
+                .onSuccess { _uiState.update { it.copy(isLoading = false, isLoginSuccess = true) } }
+                .onFailure {
+                    userAccountRepository.signUp(DEBUG_EMAIL, DEBUG_PASSWORD)
+                        .onSuccess { _uiState.update { it.copy(isLoading = false, isLoginSuccess = true) } }
+                        .onFailure { e -> _uiState.update { it.copy(isLoading = false, error = e.message ?: "Debug login failed") } }
+                }
+        }
+    }
+
     companion object {
+        private const val DEBUG_EMAIL    = "debug@srr.dev"
+        private const val DEBUG_PASSWORD = "debug1234"
+
         fun factory(): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =

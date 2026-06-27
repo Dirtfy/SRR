@@ -33,9 +33,11 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Auto-login: Firebase Auth caches session locally — this is synchronous
+    // Auto-login: Firebase Auth caches session → immediate navigation.
+    // In debug builds, also auto-signs-in with the shared debug account.
     LaunchedEffect(Unit) {
         if (viewModel.isAlreadySignedIn()) onLoginSuccess()
+        else viewModel.debugAutoLogin()
     }
 
     LaunchedEffect(uiState.isLoginSuccess) {
