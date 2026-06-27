@@ -104,6 +104,7 @@ Debator reviews → Developer fixes CRITICALs
    - **Multi-device guard:** If both a physical device and AVD are connected, set `$env:ANDROID_SERIAL = "<serial>"` to the physical device serial before running. Running on multiple devices simultaneously causes Firebase emulator account-creation collisions.
    - Physical device: run `adb reverse tcp:8080 tcp:8080 && adb reverse tcp:9099 tcp:9099` first (Firebase emulator ADB forwarding).
    - AVD: use `10.0.2.2` instead of `localhost` to reach host emulators.
+6. **After every test run:** Re-install the debug APK with `./gradlew installDebug` and restore ADB reverse ports immediately after. **Never leave the device without the latest debug APK installed.** The user must always be able to manually test the app after automated tests complete.
 
 ### Log Files — Mandatory
 
