@@ -45,11 +45,16 @@ class UserViewModel(
             loadFeatureScoresUseCase.execute()
                 .onSuccess { output ->
                     cachedEvaluations = output.evaluationsByFeature
+                    val userId = userAccountRepository.currentUserId() ?: ""
+                    val evaluatedFeatureIds = output.evaluationsByFeature
+                        .filterValues { evals -> evals.any { it.userId == userId } }
+                        .keys
                     _uiState.value = UserUiState.Ready(
-                        items         = output.items,
-                        features      = output.features,
-                        scoreMatrix   = output.scoreMatrix,
-                        currentUserId = userAccountRepository.currentUserId() ?: ""
+                        items                = output.items,
+                        features             = output.features,
+                        scoreMatrix          = output.scoreMatrix,
+                        currentUserId        = userId,
+                        evaluatedFeatureIds  = evaluatedFeatureIds
                     )
                 }
                 .onFailure { e -> _uiState.value = UserUiState.Error(e.message ?: "Failed to load") }
@@ -110,7 +115,8 @@ class UserViewModel(
             .onSuccess { loadAllData() }
             .onFailure { e ->
                 val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
-                _uiState.value = s.copy(evaluationEditor = editor.copy(isSaving = false, saveError = e.message))
+                val current = s.evaluationEditor ?: return@onFailure
+                _uiState.value = s.copy(evaluationEditor = current.copy(isSaving = false, saveError = e.message))
             }
         }
     }

@@ -126,10 +126,11 @@ private fun UserReadyContent(
         }
         state.selectedFeature != null -> {
             UserFeatureDetailContent(
-                feature    = state.selectedFeature,
-                items      = state.items,
-                matrix     = state.scoreMatrix,
-                onEvaluate = onOpenEditor
+                feature      = state.selectedFeature,
+                items        = state.items,
+                matrix       = state.scoreMatrix,
+                hasEvaluated = state.selectedFeature.id in state.evaluatedFeatureIds,
+                onEvaluate   = onOpenEditor
             )
         }
         state.selectedItem != null -> {
@@ -314,6 +315,7 @@ private fun UserFeatureDetailContent(
     feature: Feature,
     items: List<Item>,
     matrix: ScoreMatrix,
+    hasEvaluated: Boolean,
     onEvaluate: (featureId: String) -> Unit
 ) {
     val sortedItems = items.sortedWith(
@@ -324,10 +326,25 @@ private fun UserFeatureDetailContent(
         item {
             Text(feature.name, style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(8.dp))
+            if (hasEvaluated) {
+                Surface(
+                    color  = MaterialTheme.colorScheme.primaryContainer,
+                    shape  = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text     = "Your evaluation is saved. Scores appear once 3 users have evaluated.",
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
             Button(
                 onClick  = { onEvaluate(feature.id) },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Evaluate") }
+            ) { Text(if (hasEvaluated) "Re-evaluate" else "Evaluate") }
             Spacer(Modifier.height(16.dp))
             Text("Item Rankings", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))

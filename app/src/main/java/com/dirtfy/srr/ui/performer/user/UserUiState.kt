@@ -12,6 +12,7 @@ sealed class UserUiState {
         val features: List<Feature>,
         val scoreMatrix: ScoreMatrix,
         val currentUserId: String,
+        val evaluatedFeatureIds: Set<String> = emptySet(),
         val activeTab: Tab = Tab.ITEMS,
         val selectedItem: Item? = null,
         val selectedFeature: Feature? = null,
