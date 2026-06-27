@@ -8,8 +8,6 @@ sealed class UserUiState {
     object Loading : UserUiState()
     data class Error(val message: String) : UserUiState()
     data class Ready(
-        // Item and Feature are core.model.Item / core.model.Feature — not the UI models
-        // in user/items/Item.kt or user/features/Item.kt
         val items: List<Item>,
         val features: List<Feature>,
         val scoreMatrix: ScoreMatrix,
@@ -17,14 +15,28 @@ sealed class UserUiState {
         val activeTab: Tab = Tab.ITEMS,
         val selectedItem: Item? = null,
         val selectedFeature: Feature? = null,
-        val evaluationEditor: EvaluationEditorState? = null
+        val evaluationEditor: EvaluationEditorState? = null,
+        val addItemDialog: AddItemDialogState? = null,
+        val addFeatureDialog: AddFeatureDialogState? = null
     ) : UserUiState() {
-        // Debator fix #6: nested inside Ready so it cannot be accidentally assigned to StateFlow<UserUiState>
+
         data class EvaluationEditorState(
             val featureId: String,
             val orderedItemIds: List<String>,
             val isSaving: Boolean = false,
             val saveError: String? = null
+        )
+
+        data class AddItemDialogState(
+            val name: String = "",
+            val isSaving: Boolean = false,
+            val error: String? = null
+        )
+
+        data class AddFeatureDialogState(
+            val name: String = "",
+            val isSaving: Boolean = false,
+            val error: String? = null
         )
     }
 

@@ -22,4 +22,12 @@ class RemoteItemRepository : ItemRepository {
                     )
                 }
         }
+
+    override suspend fun createItem(name: String): Result<Item> =
+        runCatching {
+            val ref = db.collection("items")
+                .add(hashMapOf("name" to name))
+                .await()
+            Item(id = ref.id, name = name)
+        }
 }

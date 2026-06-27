@@ -2,15 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Any signed-in user can read items and features (catalogue data, no writes)
+    // Any signed-in user can read items and features.
+    // Any signed-in user can create new items/features; update and delete are blocked.
     match /items/{itemId} {
-      allow read: if request.auth != null;
-      allow write: if false;
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0;
     }
 
     match /features/{featureId} {
-      allow read: if request.auth != null;
-      allow write: if false;
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0;
     }
 
     // Evaluations: any signed-in user can read; user can only write their own document

@@ -7,6 +7,8 @@ import com.dirtfy.srr.core.model.Evaluation
 import com.dirtfy.srr.core.model.Feature
 import com.dirtfy.srr.core.model.Item
 import com.dirtfy.srr.core.repository.EvaluationRepository
+import com.dirtfy.srr.core.repository.FeatureRepository
+import com.dirtfy.srr.core.repository.ItemRepository
 import com.dirtfy.srr.core.repository.UserAccountRepository
 import com.dirtfy.srr.core.scoring.DefaultFeatureScoringEngine
 import com.dirtfy.srr.core.usecase.LoadFeatureScoresUseCase
@@ -22,6 +24,8 @@ import kotlinx.coroutines.launch
 class UserViewModel(
     private val userAccountRepository: UserAccountRepository,
     private val evaluationRepository: EvaluationRepository,
+    private val itemRepository: ItemRepository,
+    private val featureRepository: FeatureRepository,
     private val loadFeatureScoresUseCase: LoadFeatureScoresUseCase
 ) : ViewModel() {
 
@@ -111,6 +115,66 @@ class UserViewModel(
         }
     }
 
+    fun onOpenAddItemDialog() {
+        (_uiState.value as? UserUiState.Ready)?.let {
+            _uiState.value = it.copy(addItemDialog = UserUiState.Ready.AddItemDialogState())
+        }
+    }
+
+    fun onOpenAddFeatureDialog() {
+        (_uiState.value as? UserUiState.Ready)?.let {
+            _uiState.value = it.copy(addFeatureDialog = UserUiState.Ready.AddFeatureDialogState())
+        }
+    }
+
+    fun onAddItemNameChange(name: String) {
+        val state = _uiState.value as? UserUiState.Ready ?: return
+        val dialog = state.addItemDialog ?: return
+        _uiState.value = state.copy(addItemDialog = dialog.copy(name = name, error = null))
+    }
+
+    fun onAddFeatureNameChange(name: String) {
+        val state = _uiState.value as? UserUiState.Ready ?: return
+        val dialog = state.addFeatureDialog ?: return
+        _uiState.value = state.copy(addFeatureDialog = dialog.copy(name = name, error = null))
+    }
+
+    fun onDismissAddDialog() {
+        (_uiState.value as? UserUiState.Ready)?.let {
+            _uiState.value = it.copy(addItemDialog = null, addFeatureDialog = null)
+        }
+    }
+
+    fun onAddItem() {
+        val state  = _uiState.value as? UserUiState.Ready ?: return
+        val dialog = state.addItemDialog ?: return
+        _uiState.value = state.copy(addItemDialog = dialog.copy(isSaving = true, error = null))
+        viewModelScope.launch {
+            itemRepository.createItem(dialog.name.trim())
+                .onSuccess { loadAllData() }
+                .onFailure { e ->
+                    val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
+                    val current = s.addItemDialog ?: return@onFailure
+                    _uiState.value = s.copy(addItemDialog = current.copy(isSaving = false, error = e.message))
+                }
+        }
+    }
+
+    fun onAddFeature() {
+        val state  = _uiState.value as? UserUiState.Ready ?: return
+        val dialog = state.addFeatureDialog ?: return
+        _uiState.value = state.copy(addFeatureDialog = dialog.copy(isSaving = true, error = null))
+        viewModelScope.launch {
+            featureRepository.createFeature(dialog.name.trim())
+                .onSuccess { loadAllData() }
+                .onFailure { e ->
+                    val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
+                    val current = s.addFeatureDialog ?: return@onFailure
+                    _uiState.value = s.copy(addFeatureDialog = current.copy(isSaving = false, error = e.message))
+                }
+        }
+    }
+
     fun clearSelection() {
         val state = _uiState.value as? UserUiState.Ready ?: return
         _uiState.value = when {
@@ -125,12 +189,16 @@ class UserViewModel(
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 val evaluationRepo = RemoteEvaluationRepository()
+                val itemRepo       = RemoteItemRepository()
+                val featureRepo    = RemoteFeatureRepository()
                 return UserViewModel(
                     userAccountRepository    = RemoteUserAccountRepository(),
                     evaluationRepository     = evaluationRepo,
+                    itemRepository           = itemRepo,
+                    featureRepository        = featureRepo,
                     loadFeatureScoresUseCase = LoadFeatureScoresUseCase(
-                        itemRepository       = RemoteItemRepository(),
-                        featureRepository    = RemoteFeatureRepository(),
+                        itemRepository       = itemRepo,
+                        featureRepository    = featureRepo,
                         evaluationRepository = evaluationRepo,
                         scoringEngine        = DefaultFeatureScoringEngine()
                     )

@@ -61,15 +61,22 @@ class UserFragment : BaseFragment() {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
         UserScreen(
-            modifier            = modifier,
-            uiState             = uiState,
-            onTabSelected       = viewModel::onTabSelected,
-            onItemSelected      = viewModel::onItemSelected,
-            onFeatureSelected   = viewModel::onFeatureSelected,
-            onOpenEditor        = viewModel::onOpenEvaluationEditor,
-            onEvaluationReorder = viewModel::onEvaluationReorder,
-            onSubmitEvaluation  = viewModel::onSubmitEvaluation,
-            onRetryTap          = viewModel::onRetryTap
+            modifier               = modifier,
+            uiState                = uiState,
+            onTabSelected          = viewModel::onTabSelected,
+            onItemSelected         = viewModel::onItemSelected,
+            onFeatureSelected      = viewModel::onFeatureSelected,
+            onOpenEditor           = viewModel::onOpenEvaluationEditor,
+            onEvaluationReorder    = viewModel::onEvaluationReorder,
+            onSubmitEvaluation     = viewModel::onSubmitEvaluation,
+            onRetryTap             = viewModel::onRetryTap,
+            onOpenAddItemDialog    = viewModel::onOpenAddItemDialog,
+            onOpenAddFeatureDialog = viewModel::onOpenAddFeatureDialog,
+            onAddItemNameChange    = viewModel::onAddItemNameChange,
+            onAddFeatureNameChange = viewModel::onAddFeatureNameChange,
+            onDismissAddDialog     = viewModel::onDismissAddDialog,
+            onAddItem              = viewModel::onAddItem,
+            onAddFeature           = viewModel::onAddFeature
         )
     }
 }

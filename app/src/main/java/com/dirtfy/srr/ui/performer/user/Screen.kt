@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -33,7 +34,14 @@ fun UserScreen(
     onOpenEditor: (featureId: String) -> Unit,
     onEvaluationReorder: (List<String>) -> Unit,
     onSubmitEvaluation: () -> Unit,
-    onRetryTap: () -> Unit
+    onRetryTap: () -> Unit,
+    onOpenAddItemDialog: () -> Unit,
+    onOpenAddFeatureDialog: () -> Unit,
+    onAddItemNameChange: (String) -> Unit,
+    onAddFeatureNameChange: (String) -> Unit,
+    onDismissAddDialog: () -> Unit,
+    onAddItem: () -> Unit,
+    onAddFeature: () -> Unit
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         when (uiState) {
@@ -54,14 +62,38 @@ fun UserScreen(
             }
             is UserUiState.Ready -> {
                 UserReadyContent(
-                    state               = uiState,
-                    onTabSelected       = onTabSelected,
-                    onItemSelected      = onItemSelected,
-                    onFeatureSelected   = onFeatureSelected,
-                    onOpenEditor        = onOpenEditor,
-                    onEvaluationReorder = onEvaluationReorder,
-                    onSubmitEvaluation  = onSubmitEvaluation
+                    state                  = uiState,
+                    onTabSelected          = onTabSelected,
+                    onItemSelected         = onItemSelected,
+                    onFeatureSelected      = onFeatureSelected,
+                    onOpenEditor           = onOpenEditor,
+                    onEvaluationReorder    = onEvaluationReorder,
+                    onSubmitEvaluation     = onSubmitEvaluation,
+                    onOpenAddItemDialog    = onOpenAddItemDialog,
+                    onOpenAddFeatureDialog = onOpenAddFeatureDialog
                 )
+                uiState.addItemDialog?.let { dialog ->
+                    AddDialog(
+                        title        = "Add Item",
+                        state        = dialog.name,
+                        isSaving     = dialog.isSaving,
+                        error        = dialog.error,
+                        onNameChange = onAddItemNameChange,
+                        onConfirm    = onAddItem,
+                        onDismiss    = onDismissAddDialog
+                    )
+                }
+                uiState.addFeatureDialog?.let { dialog ->
+                    AddDialog(
+                        title        = "Add Feature",
+                        state        = dialog.name,
+                        isSaving     = dialog.isSaving,
+                        error        = dialog.error,
+                        onNameChange = onAddFeatureNameChange,
+                        onConfirm    = onAddFeature,
+                        onDismiss    = onDismissAddDialog
+                    )
+                }
             }
         }
     }
@@ -79,22 +111,24 @@ private fun UserReadyContent(
     onFeatureSelected: (Feature) -> Unit,
     onOpenEditor: (featureId: String) -> Unit,
     onEvaluationReorder: (List<String>) -> Unit,
-    onSubmitEvaluation: () -> Unit
+    onSubmitEvaluation: () -> Unit,
+    onOpenAddItemDialog: () -> Unit,
+    onOpenAddFeatureDialog: () -> Unit
 ) {
     when {
         state.evaluationEditor != null -> {
             EvaluationEditorSheet(
-                editor       = state.evaluationEditor,
-                items        = state.items,
-                onReorder    = onEvaluationReorder,
-                onSubmit     = onSubmitEvaluation
+                editor    = state.evaluationEditor,
+                items     = state.items,
+                onReorder = onEvaluationReorder,
+                onSubmit  = onSubmitEvaluation
             )
         }
         state.selectedFeature != null -> {
             UserFeatureDetailContent(
-                feature   = state.selectedFeature,
-                items     = state.items,
-                matrix    = state.scoreMatrix,
+                feature    = state.selectedFeature,
+                items      = state.items,
+                matrix     = state.scoreMatrix,
                 onEvaluate = onOpenEditor
             )
         }
@@ -107,10 +141,12 @@ private fun UserReadyContent(
         }
         else -> {
             UserTabContent(
-                state            = state,
-                onTabSelected    = onTabSelected,
-                onItemSelected   = onItemSelected,
-                onFeatureSelected = onFeatureSelected
+                state                  = state,
+                onTabSelected          = onTabSelected,
+                onItemSelected         = onItemSelected,
+                onFeatureSelected      = onFeatureSelected,
+                onOpenAddItemDialog    = onOpenAddItemDialog,
+                onOpenAddFeatureDialog = onOpenAddFeatureDialog
             )
         }
     }
@@ -125,7 +161,9 @@ private fun UserTabContent(
     state: UserUiState.Ready,
     onTabSelected: (UserUiState.Tab) -> Unit,
     onItemSelected: (Item) -> Unit,
-    onFeatureSelected: (Feature) -> Unit
+    onFeatureSelected: (Feature) -> Unit,
+    onOpenAddItemDialog: () -> Unit,
+    onOpenAddFeatureDialog: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         PrimaryTabRow(selectedTabIndex = state.activeTab.ordinal) {
@@ -140,14 +178,19 @@ private fun UserTabContent(
 
         when (state.activeTab) {
             UserUiState.Tab.ITEMS -> {
-                ItemsTabContent(items = state.items, onItemSelected = onItemSelected)
+                ItemsTabContent(
+                    items          = state.items,
+                    onItemSelected = onItemSelected,
+                    onAddClick     = onOpenAddItemDialog
+                )
             }
             UserUiState.Tab.FEATURES -> {
                 FeaturesTabContent(
-                    features        = state.features,
-                    items           = state.items,
-                    matrix          = state.scoreMatrix,
-                    onFeatureSelected = onFeatureSelected
+                    features          = state.features,
+                    items             = state.items,
+                    matrix            = state.scoreMatrix,
+                    onFeatureSelected = onFeatureSelected,
+                    onAddClick        = onOpenAddFeatureDialog
                 )
             }
         }
@@ -159,14 +202,31 @@ private fun UserTabContent(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun ItemsTabContent(items: List<Item>, onItemSelected: (Item) -> Unit) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(items, key = { it.id }) { item ->
-            ListItem(
-                headlineContent = { Text(item.name) },
-                modifier = Modifier.clickableItem { onItemSelected(item) }
-            )
-            HorizontalDivider()
+private fun ItemsTabContent(
+    items: List<Item>,
+    onItemSelected: (Item) -> Unit,
+    onAddClick: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 88.dp)
+        ) {
+            items(items, key = { it.id }) { item ->
+                ListItem(
+                    headlineContent = { Text(item.name) },
+                    modifier = Modifier.clickableItem { onItemSelected(item) }
+                )
+                HorizontalDivider()
+            }
+        }
+        FloatingActionButton(
+            onClick   = onAddClick,
+            modifier  = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Add item")
         }
     }
 }
@@ -180,19 +240,33 @@ private fun FeaturesTabContent(
     features: List<Feature>,
     items: List<Item>,
     matrix: ScoreMatrix,
-    onFeatureSelected: (Feature) -> Unit
+    onFeatureSelected: (Feature) -> Unit,
+    onAddClick: () -> Unit
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(features, key = { it.id }) { feature ->
-            val ratedCount = items.count { item ->
-                matrix.scores[item.id]?.get(feature.id) != null
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 88.dp)
+        ) {
+            items(features, key = { it.id }) { feature ->
+                val ratedCount = items.count { item ->
+                    matrix.scores[item.id]?.get(feature.id) != null
+                }
+                ListItem(
+                    headlineContent = { Text(feature.name) },
+                    trailingContent = { Text("$ratedCount/${items.size}") },
+                    modifier = Modifier.clickableItem { onFeatureSelected(feature) }
+                )
+                HorizontalDivider()
             }
-            ListItem(
-                headlineContent = { Text(feature.name) },
-                trailingContent = { Text("$ratedCount/${items.size}") },
-                modifier = Modifier.clickableItem { onFeatureSelected(feature) }
-            )
-            HorizontalDivider()
+        }
+        FloatingActionButton(
+            onClick   = onAddClick,
+            modifier  = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Add feature")
         }
     }
 }
@@ -360,6 +434,63 @@ private fun EvaluationEditorSheet(
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Add item / Add feature dialog (shared layout)
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun AddDialog(
+    title: String,
+    state: String,
+    isSaving: Boolean,
+    error: String?,
+    onNameChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title            = { Text(title) },
+        text             = {
+            Column {
+                OutlinedTextField(
+                    value         = state,
+                    onValueChange = onNameChange,
+                    label         = { Text("Name") },
+                    singleLine    = true,
+                    isError       = error != null,
+                    modifier      = Modifier.fillMaxWidth()
+                )
+                if (error != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text  = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = state.isNotBlank() && !isSaving
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Add")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isSaving) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 // ---------------------------------------------------------------------------

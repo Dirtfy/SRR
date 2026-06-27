@@ -85,20 +85,22 @@ Every meaningful piece of work passes through three logical roles. Claude plays 
 |------|---------------|
 | **Debator** | Reviews completed code. Finds problems actively (not passively). Categorizes findings as CRITICAL / WARNING / MINOR. Writes `debat_log/debat_YYYY-MM-DD.md`. |
 | **Developer** | Implements features and bug fixes. Must fix every CRITICAL finding before committing. |
-| **Tester** | Runs the test suite after every commit. Writes `testing_log/test_YYYY-MM-DD.md`. Approves or rejects push. |
+| **Tester** | Gates commits with unit tests; gates pushes with instrumented tests. Writes `testing_log/test_YYYY-MM-DD.md`. Approves or rejects each gate. |
 
 ### Workflow — Required Order
 
 ```
-Debator reviews → Developer fixes CRITICALs → commit (locally)
-→ Tester runs tests → write all logs → push only if Tester approves
+Debator reviews → Developer fixes CRITICALs
+→ Tester: unit tests pass → commit (locally) → write all logs
+→ Tester: instrumented tests pass → push
 ```
 
-1. **Before every commit:** Debator reviews the work and writes the debat log. Developer applies every CRITICAL fix, then commits.
-2. **Commit threshold:** Commit locally when >100 lines have changed or a meaningful milestone is reached. Never accumulate changes across many features without committing.
-3. **After every commit:** Tester runs `./gradlew testDebugUnitTest --no-daemon` and writes the test log.
-4. **Push gate:** Push to remote only after Tester explicitly approves (tests pass).
+1. **Before every commit:** Debator reviews the work and writes the debat log. Developer applies every CRITICAL fix.
+2. **Commit gate (unit tests):** Tester runs `./gradlew testDebugUnitTest` and writes the test log. Commit locally only if unit tests pass. Never commit when unit tests fail.
+3. **Commit threshold:** Commit locally when >100 lines have changed or a meaningful milestone is reached. Never accumulate changes across many features without committing.
+4. **Push gate (instrumented tests):** Push to remote only after Tester runs instrumented tests and they pass. Do not push on unit-test pass alone.
 5. **Instrumented tests:** Run `./gradlew connectedDebugAndroidTest` only when the user says a device or AVD is connected. If they pass, push all local commits.
+   - **Device preference order:** Always use a connected physical device first. Only fall back to AVD if no physical device is available (`adb devices` shows no device).
    - Physical device: run `adb reverse tcp:8080 tcp:8080 && adb reverse tcp:9099 tcp:9099` first (Firebase emulator ADB forwarding).
    - AVD: use `10.0.2.2` instead of `localhost` to reach host emulators.
 

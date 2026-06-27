@@ -22,4 +22,12 @@ class RemoteFeatureRepository : FeatureRepository {
                     )
                 }
         }
+
+    override suspend fun createFeature(name: String): Result<Feature> =
+        runCatching {
+            val ref = db.collection("features")
+                .add(hashMapOf("name" to name))
+                .await()
+            Feature(id = ref.id, name = name)
+        }
 }
