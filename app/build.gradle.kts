@@ -34,6 +34,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Use debug keystore so release APKs can be installed on a dev device.
+            // Replace with a real release keystore before distributing to users.
+            signingConfig = signingConfigs.getByName("debug")
         }
         // staging: production Firebase + debug signing. Use `./gradlew installStaging` to
         // install an APK that connects to real Firestore/Auth for manual end-to-end testing.
