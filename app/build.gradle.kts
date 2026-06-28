@@ -1,5 +1,16 @@
 import java.net.HttpURLConnection
 import java.net.URI
+import java.util.Properties
+
+// Load release signing credentials from keystore.properties (git-ignored).
+// Falls back to the debug keystore when the file is absent or no key is configured.
+val keystoreProps = Properties().also { props ->
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) props.load(f.inputStream())
+}
+val releaseStoreFile = keystoreProps.getProperty("RELEASE_STORE_FILE")
+    ?.let { file(it) }
+    ?.takeIf { it.exists() }
 
 plugins {
     alias(libs.plugins.android.application)
@@ -11,6 +22,17 @@ plugins {
 android {
     namespace = "com.dirtfy.srr"
     compileSdk = 36
+
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile     = releaseStoreFile
+                storePassword = keystoreProps.getProperty("RELEASE_STORE_PASSWORD", "")
+                keyAlias      = keystoreProps.getProperty("RELEASE_KEY_ALIAS", "")
+                keyPassword   = keystoreProps.getProperty("RELEASE_KEY_PASSWORD", "")
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.dirtfy.srr"
@@ -34,9 +56,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Use debug keystore so release APKs can be installed on a dev device.
-            // Replace with a real release keystore before distributing to users.
-            signingConfig = signingConfigs.getByName("debug")
+            // Use personal release keystore when keystore.properties is filled in;
+            // falls back to the debug keystore so dev-device installs always work.
+            signingConfig = if (releaseStoreFile != null) signingConfigs.getByName("release")
+                            else signingConfigs.getByName("debug")
         }
         // staging: production Firebase + debug signing. Use `./gradlew installStaging` to
         // install an APK that connects to real Firestore/Auth for manual end-to-end testing.
