@@ -4,11 +4,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.dirtfy.srr.core.model.Feature
 import com.dirtfy.srr.core.model.Item
 import com.dirtfy.srr.core.model.ScoreMatrix
@@ -211,14 +215,29 @@ private fun CompilationItemDetailContent(
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
         item {
+            val url = item.imageUrl?.takeIf { it.isNotBlank() }
+            if (url != null) {
+                AsyncImage(
+                    model              = url,
+                    contentDescription = item.name,
+                    contentScale       = ContentScale.Crop,
+                    modifier           = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+                Spacer(Modifier.height(16.dp))
+            }
             Text(item.name, style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(16.dp))
             Text("Feature Scores", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
         }
         items(features, key = { it.id }) { feature ->
-            val raw = matrix.scores[item.id]?.get(feature.id)
-            val display = if (raw != null) "%.1f".format(raw) else "—"
+            val raw       = matrix.scores[item.id]?.get(feature.id)
+            val voteCount = matrix.voteCounts[item.id]?.get(feature.id) ?: 0
+            val needed    = (SCORE_THRESHOLD - voteCount).coerceAtLeast(0)
+            val display   = if (raw != null) "%.1f".format(raw) else "Needs $needed more"
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -226,7 +245,12 @@ private fun CompilationItemDetailContent(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(feature.name, modifier = Modifier.weight(1f))
-                Text(display)
+                Text(
+                    text  = display,
+                    color = if (raw != null) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
             HorizontalDivider()
         }
@@ -253,8 +277,10 @@ private fun CompilationFeatureDetailContent(
             Spacer(Modifier.height(8.dp))
         }
         items(sorted, key = { it.id }) { item ->
-            val raw = matrix.scores[item.id]?.get(feature.id)
-            val display = if (raw != null) "%.1f".format(raw) else "—"
+            val raw       = matrix.scores[item.id]?.get(feature.id)
+            val voteCount = matrix.voteCounts[item.id]?.get(feature.id) ?: 0
+            val needed    = (SCORE_THRESHOLD - voteCount).coerceAtLeast(0)
+            val display   = if (raw != null) "%.1f".format(raw) else "Needs $needed more"
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -262,7 +288,12 @@ private fun CompilationFeatureDetailContent(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(item.name, modifier = Modifier.weight(1f))
-                Text(display)
+                Text(
+                    text  = display,
+                    color = if (raw != null) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
             HorizontalDivider()
         }
@@ -287,22 +318,28 @@ private fun CompilationMapTab(
         ?: state.features.getOrNull(1)
         ?: state.features.getOrNull(0)
 
-    val mapItems = state.items.map { item ->
+    // Only show items that have enough evaluations on both selected axes
+    val mapItems = state.items.mapNotNull { item ->
         val xScore = xFeature?.let { state.scoreMatrix.scores[item.id]?.get(it.id) }
         val yScore = yFeature?.let { state.scoreMatrix.scores[item.id]?.get(it.id) }
-        MapItem(
+        if (xScore == null || yScore == null) null
+        else MapItem(
             title          = item.name,
             imageUrl       = item.imageUrl,
-            primaryScore   = if (xScore != null) "%.1f".format(xScore) else "—",
-            secondaryScore = if (yScore != null) "%.1f".format(yScore) else "—"
+            primaryScore   = "%.1f".format(xScore),
+            secondaryScore = "%.1f".format(yScore)
         )
     }
+
+    val hint = "Only items with $SCORE_THRESHOLD+ evaluations on both axes are shown " +
+               "(${mapItems.size} of ${state.items.size})"
 
     MapScreen(
         items              = mapItems,
         availableFeatures  = featureNames,
         featureX           = xFeature?.name ?: "",
         featureY           = yFeature?.name ?: "",
+        hint               = hint,
         onFeatureXSelected = { name ->
             state.features.find { it.name == name }?.let { onMapXFeatureSelected(it.id) }
         },

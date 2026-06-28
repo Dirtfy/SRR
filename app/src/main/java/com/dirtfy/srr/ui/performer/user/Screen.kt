@@ -290,6 +290,8 @@ private fun ItemsTabContent(
     }
 }
 
+private const val MIN_EVALUATORS = 3  // must match LoadFeatureScoresUseCase.minVoteThreshold
+
 // ---------------------------------------------------------------------------
 // Features tab
 // ---------------------------------------------------------------------------
@@ -313,10 +315,17 @@ private fun FeaturesTabContent(
                 val evaluatorCount = evaluatorCountByFeature[feature.id] ?: 0
                 val hasEvaluated   = feature.id in evaluatedFeatureIds
                 val isOwner = feature.createdBy == currentUserId && currentUserId.isNotEmpty()
+                val pct = (evaluatorCount.coerceAtMost(MIN_EVALUATORS) * 100 / MIN_EVALUATORS)
                 ListItem(
                     headlineContent   = { Text(feature.name) },
                     supportingContent = when {
-                        isOwner      -> { { Text("Added by you", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } }
+                        isOwner && !hasEvaluated -> { {
+                            Column {
+                                Text("Added by you", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                Text("Tap to evaluate", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                            }
+                        } }
+                        isOwner       -> { { Text("Added by you", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) } }
                         !hasEvaluated -> { { Text("Tap to evaluate", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary) } }
                         else          -> null
                     },
@@ -324,8 +333,14 @@ private fun FeaturesTabContent(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text  = "$evaluatorCount evaluated",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    text  = "$pct%",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = if (evaluatorCount >= MIN_EVALUATORS) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text  = "$evaluatorCount / $MIN_EVALUATORS",
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 if (hasEvaluated) {

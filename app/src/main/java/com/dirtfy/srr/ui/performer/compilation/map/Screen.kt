@@ -22,6 +22,7 @@ fun MapScreen(
     availableFeatures: List<String>,
     featureX: String,
     featureY: String,
+    hint: String? = null,
     onFeatureXSelected: (String) -> Unit,
     onFeatureYSelected: (String) -> Unit
 ) {
@@ -29,26 +30,39 @@ fun MapScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Surface(tonalElevation = 3.dp, shadowElevation = 2.dp) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                FeatureDropdown(
-                    label = "X Axis",
-                    selectedFeature = featureX,
-                    options = availableFeatures,
-                    onFeatureSelected = onFeatureXSelected,
-                    modifier = Modifier.weight(1f)
-                )
-                FeatureDropdown(
-                    label = "Y Axis",
-                    selectedFeature = featureY,
-                    options = availableFeatures,
-                    onFeatureSelected = onFeatureYSelected,
-                    modifier = Modifier.weight(1f)
-                )
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FeatureDropdown(
+                        label = "X Axis",
+                        selectedFeature = featureX,
+                        options = availableFeatures,
+                        onFeatureSelected = onFeatureXSelected,
+                        modifier = Modifier.weight(1f)
+                    )
+                    FeatureDropdown(
+                        label = "Y Axis",
+                        selectedFeature = featureY,
+                        options = availableFeatures,
+                        onFeatureSelected = onFeatureYSelected,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (hint != null) {
+                    Text(
+                        text     = hint,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 10.dp),
+                        style    = MaterialTheme.typography.labelSmall,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
