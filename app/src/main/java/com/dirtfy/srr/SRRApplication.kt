@@ -6,6 +6,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
 
 class SRRApplication : Application() {
     override fun onCreate() {
@@ -21,6 +22,7 @@ class SRRApplication : Application() {
                     .build()
             Firebase.auth.useEmulator("localhost", 9099)
             Firebase.firestore.useEmulator("localhost", 8080)
+            Firebase.storage.useEmulator("localhost", 9199)
         }
     }
 }
