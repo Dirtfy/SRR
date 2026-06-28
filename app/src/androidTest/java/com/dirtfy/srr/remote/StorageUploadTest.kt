@@ -42,10 +42,13 @@ class StorageUploadTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val p = System.currentTimeMillis().toString().takeLast(8)
 
+    // Block body so JUnit sees void return type regardless of last expression
     @Before
-    fun setUp() = runBlocking {
-        Firebase.auth.signOut()
-        Firebase.auth.createUserWithEmailAndPassword("${p}_stor@t.com", "pw123456").await()
+    fun setUp() {
+        runBlocking {
+            Firebase.auth.signOut()
+            Firebase.auth.createUserWithEmailAndPassword("${p}_stor@t.com", "pw123456").await()
+        }
     }
 
     @After
@@ -70,54 +73,45 @@ class StorageUploadTest {
 
     @Test
     fun uploadItemImage_successReturnsHttpUrl() = runBlocking {
-        val file = createTestImageFile("upload_success_${System.currentTimeMillis()}.jpg")
-        val uri  = Uri.fromFile(file)
-
-        val result = RemoteStorageRepository(context).uploadItemImage(uri)
+        val file = createTestImageFile("upload_success_$p.jpg")
+        val result = RemoteStorageRepository(context).uploadItemImage(Uri.fromFile(file))
+        file.delete()
 
         assertTrue("upload should succeed: ${result.exceptionOrNull()?.message}", result.isSuccess)
-        val url = result.getOrThrow()
-        assertTrue("URL must start with http", url.startsWith("http"))
-
-        file.delete()
+        assertTrue("URL must start with http", result.getOrThrow().startsWith("http"))
     }
 
     @Test
     fun uploadItemImage_urlContainsItemsPath() = runBlocking {
-        val file = createTestImageFile("upload_path_${System.currentTimeMillis()}.jpg")
+        val file = createTestImageFile("upload_path_$p.jpg")
         val result = RemoteStorageRepository(context).uploadItemImage(Uri.fromFile(file))
+        file.delete()
 
         assertTrue(result.isSuccess)
-        // Storage path is items/<uuid>.jpg — encoded as items%2F in download URL
         assertTrue("URL should reference items/ path", result.getOrThrow().contains("items"))
-
-        file.delete()
     }
 
     @Test
     fun uploadItemImage_unauthenticated_fails() = runBlocking {
         Firebase.auth.signOut()
-        val file = createTestImageFile("upload_unauth_${System.currentTimeMillis()}.jpg")
-
+        val file = createTestImageFile("upload_unauth_$p.jpg")
         val result = RemoteStorageRepository(context).uploadItemImage(Uri.fromFile(file))
+        file.delete()
 
         assertTrue("unauthenticated upload must fail", result.isFailure)
-
-        file.delete()
     }
 
     @Test
     fun uploadTwice_producesTwoDistinctUrls() = runBlocking {
-        val file1 = createTestImageFile("upload_dup1_${System.currentTimeMillis()}.jpg")
-        val file2 = createTestImageFile("upload_dup2_${System.currentTimeMillis()}.jpg")
+        val file1 = createTestImageFile("upload_dup1_$p.jpg")
+        val file2 = createTestImageFile("upload_dup2_$p.jpg")
         val repo  = RemoteStorageRepository(context)
 
         val url1 = repo.uploadItemImage(Uri.fromFile(file1)).getOrThrow()
         val url2 = repo.uploadItemImage(Uri.fromFile(file2)).getOrThrow()
-
-        assertTrue("each upload must produce a unique URL", url1 != url2)
-
         file1.delete()
         file2.delete()
+
+        assertTrue("each upload must produce a unique URL", url1 != url2)
     }
 }
