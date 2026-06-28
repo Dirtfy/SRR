@@ -23,12 +23,13 @@ class RemoteItemRepository : ItemRepository {
                     Item(
                         id        = doc.id,
                         name      = doc.getString("name") ?: doc.id,
-                        createdBy = doc.getString("createdBy") ?: ""
+                        createdBy = doc.getString("createdBy") ?: "",
+                        imageUrl  = doc.getString("imageUrl")
                     )
                 }
         }
 
-    override suspend fun createItem(name: String, createdBy: String): Result<Item> =
+    override suspend fun createItem(name: String, createdBy: String, imageUrl: String?): Result<Item> =
         runCatching {
             val trimmed   = name.trim()
             val nameLower = trimmed.lowercase()
@@ -39,15 +40,16 @@ class RemoteItemRepository : ItemRepository {
             val all = db.collection("items").get(Source.SERVER).await()
             if (all.documents.any { it.getString("nameLower") == nameLower })
                 throw IllegalArgumentException("An item named \"$trimmed\" already exists")
-            val ref = db.collection("items")
-                .add(hashMapOf(
-                    "name"      to trimmed,
-                    "nameLower" to nameLower,
-                    "createdBy" to createdBy,
-                    "createdAt" to FieldValue.serverTimestamp()
-                ))
-                .await()
-            Item(id = ref.id, name = trimmed, createdBy = createdBy)
+            val data = hashMapOf(
+                "name"      to trimmed,
+                "nameLower" to nameLower,
+                "createdBy" to createdBy,
+                "createdAt" to FieldValue.serverTimestamp()
+            )
+            val url = imageUrl?.trim()?.takeIf { it.isNotEmpty() }
+            if (url != null) data["imageUrl"] = url
+            val ref = db.collection("items").add(data).await()
+            Item(id = ref.id, name = trimmed, createdBy = createdBy, imageUrl = url)
         }
 
     override suspend fun deleteItem(id: String): Result<Unit> =

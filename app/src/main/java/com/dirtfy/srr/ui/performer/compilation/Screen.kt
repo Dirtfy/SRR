@@ -292,7 +292,7 @@ private fun CompilationMapTab(
         val yScore = yFeature?.let { state.scoreMatrix.scores[item.id]?.get(it.id) }
         MapItem(
             title          = item.name,
-            imageRes       = android.R.drawable.ic_menu_agenda,
+            imageUrl       = item.imageUrl,
             primaryScore   = if (xScore != null) "%.1f".format(xScore) else "—",
             secondaryScore = if (yScore != null) "%.1f".format(yScore) else "—"
         )

@@ -73,6 +73,7 @@ class UserFragment : BaseFragment() {
             onOpenAddItemDialog    = viewModel::onOpenAddItemDialog,
             onOpenAddFeatureDialog = viewModel::onOpenAddFeatureDialog,
             onAddItemNameChange    = viewModel::onAddItemNameChange,
+            onAddItemImageUrlChange = viewModel::onAddItemImageUrlChange,
             onAddFeatureNameChange = viewModel::onAddFeatureNameChange,
             onDismissAddDialog     = viewModel::onDismissAddDialog,
             onAddItem                     = viewModel::onAddItem,

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -14,7 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.dirtfy.srr.core.model.Feature
 import com.dirtfy.srr.core.model.Item
 import sh.calvin.reorderable.ReorderableItem
@@ -38,6 +42,7 @@ fun UserScreen(
     onOpenAddItemDialog: () -> Unit,
     onOpenAddFeatureDialog: () -> Unit,
     onAddItemNameChange: (String) -> Unit,
+    onAddItemImageUrlChange: (String) -> Unit,
     onAddFeatureNameChange: (String) -> Unit,
     onDismissAddDialog: () -> Unit,
     onAddItem: () -> Unit,
@@ -87,7 +92,16 @@ fun UserScreen(
                         onNameChange = onAddItemNameChange,
                         onConfirm    = onAddItem,
                         onDismiss    = onDismissAddDialog
-                    )
+                    ) {
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value         = dialog.imageUrl,
+                            onValueChange = onAddItemImageUrlChange,
+                            label         = { Text("Image URL (optional)") },
+                            singleLine    = true,
+                            modifier      = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
                 uiState.addFeatureDialog?.let { dialog ->
                     AddDialog(
@@ -354,6 +368,19 @@ private fun UserItemDetailContent(
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
         item {
+            val url = item.imageUrl?.takeIf { it.isNotBlank() }
+            if (url != null) {
+                AsyncImage(
+                    model              = url,
+                    contentDescription = item.name,
+                    contentScale       = ContentScale.Crop,
+                    modifier           = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+                Spacer(Modifier.height(16.dp))
+            }
             Text(item.name, style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(16.dp))
             Text("My Ranking per Feature", style = MaterialTheme.typography.titleMedium)
@@ -539,7 +566,8 @@ private fun AddDialog(
     error: String?,
     onNameChange: (String) -> Unit,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    extraContent: @Composable ColumnScope.() -> Unit = {}
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -562,6 +590,7 @@ private fun AddDialog(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+                extraContent()
             }
         },
         confirmButton = {

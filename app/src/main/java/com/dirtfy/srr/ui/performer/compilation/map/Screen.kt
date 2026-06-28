@@ -168,8 +168,8 @@ fun ScatterPlot(items: List<Item>, onPointClick: (Item) -> Unit) {
 fun MapScreenPreview() {
     val mockFeatures = listOf("Performance", "Stability", "UI Design", "Security")
     val mockItems = listOf(
-        Item("High Performance", android.R.drawable.ic_menu_gallery, "0.8", "0.5"),
-        Item("Low Stability",    android.R.drawable.ic_menu_manage,  "-0.7", "-0.3")
+        Item("High Performance", null, "0.8", "0.5"),
+        Item("Low Stability",    null, "-0.7", "-0.3")
     )
     MaterialTheme {
         Surface(color = MaterialTheme.colorScheme.background) {

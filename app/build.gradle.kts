@@ -118,6 +118,9 @@ dependencies {
     // Drag-to-reorder
     implementation(libs.reorderable)
 
+    // Image loading from URLs
+    implementation(libs.coil.compose)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

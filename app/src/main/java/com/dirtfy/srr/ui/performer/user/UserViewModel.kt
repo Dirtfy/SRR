@@ -147,6 +147,12 @@ class UserViewModel(
         _uiState.value = state.copy(addItemDialog = dialog.copy(name = name, error = null))
     }
 
+    fun onAddItemImageUrlChange(url: String) {
+        val state = _uiState.value as? UserUiState.Ready ?: return
+        val dialog = state.addItemDialog ?: return
+        _uiState.value = state.copy(addItemDialog = dialog.copy(imageUrl = url))
+    }
+
     fun onAddFeatureNameChange(name: String) {
         val state = _uiState.value as? UserUiState.Ready ?: return
         val dialog = state.addFeatureDialog ?: return
@@ -164,7 +170,11 @@ class UserViewModel(
         val dialog = state.addItemDialog ?: return
         _uiState.value = state.copy(addItemDialog = dialog.copy(isSaving = true, error = null))
         viewModelScope.launch {
-            itemRepository.createItem(dialog.name.trim(), state.currentUserId)
+            itemRepository.createItem(
+                name       = dialog.name.trim(),
+                createdBy  = state.currentUserId,
+                imageUrl   = dialog.imageUrl.trim().takeIf { it.isNotEmpty() }
+            )
                 .onSuccess { loadAllData() }
                 .onFailure { e ->
                     val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
