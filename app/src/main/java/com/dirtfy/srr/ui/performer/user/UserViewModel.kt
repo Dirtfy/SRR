@@ -6,15 +6,18 @@ import androidx.lifecycle.viewModelScope
 import com.dirtfy.srr.core.model.Evaluation
 import com.dirtfy.srr.core.model.Feature
 import com.dirtfy.srr.core.model.Item
+import android.net.Uri
 import com.dirtfy.srr.core.repository.EvaluationRepository
 import com.dirtfy.srr.core.repository.FeatureRepository
 import com.dirtfy.srr.core.repository.ItemRepository
+import com.dirtfy.srr.core.repository.StorageRepository
 import com.dirtfy.srr.core.repository.UserAccountRepository
 import com.dirtfy.srr.core.scoring.DefaultFeatureScoringEngine
 import com.dirtfy.srr.core.usecase.LoadFeatureScoresUseCase
 import com.dirtfy.srr.remote.repository.RemoteEvaluationRepository
 import com.dirtfy.srr.remote.repository.RemoteFeatureRepository
 import com.dirtfy.srr.remote.repository.RemoteItemRepository
+import com.dirtfy.srr.remote.repository.RemoteStorageRepository
 import com.dirtfy.srr.remote.repository.RemoteUserAccountRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +29,7 @@ class UserViewModel(
     private val evaluationRepository: EvaluationRepository,
     private val itemRepository: ItemRepository,
     private val featureRepository: FeatureRepository,
+    private val storageRepository: StorageRepository,
     private val loadFeatureScoresUseCase: LoadFeatureScoresUseCase
 ) : ViewModel() {
 
@@ -147,10 +151,28 @@ class UserViewModel(
         _uiState.value = state.copy(addItemDialog = dialog.copy(name = name, error = null))
     }
 
-    fun onAddItemImageUrlChange(url: String) {
+    fun onAddItemImagePicked(uri: Uri) {
         val state = _uiState.value as? UserUiState.Ready ?: return
         val dialog = state.addItemDialog ?: return
-        _uiState.value = state.copy(addItemDialog = dialog.copy(imageUrl = url))
+        _uiState.value = state.copy(
+            addItemDialog = dialog.copy(imageUri = uri, imageUrl = null, isUploadingImage = true, error = null)
+        )
+        viewModelScope.launch {
+            storageRepository.uploadItemImage(uri)
+                .onSuccess { url ->
+                    val s = _uiState.value as? UserUiState.Ready ?: return@onSuccess
+                    val d = s.addItemDialog ?: return@onSuccess
+                    _uiState.value = s.copy(addItemDialog = d.copy(imageUrl = url, isUploadingImage = false))
+                }
+                .onFailure { e ->
+                    val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
+                    val d = s.addItemDialog ?: return@onFailure
+                    _uiState.value = s.copy(
+                        addItemDialog = d.copy(imageUri = null, imageUrl = null, isUploadingImage = false,
+                            error = "Image upload failed: ${e.message}")
+                    )
+                }
+        }
     }
 
     fun onAddFeatureNameChange(name: String) {
@@ -168,12 +190,13 @@ class UserViewModel(
     fun onAddItem() {
         val state  = _uiState.value as? UserUiState.Ready ?: return
         val dialog = state.addItemDialog ?: return
+        if (dialog.isUploadingImage) return
         _uiState.value = state.copy(addItemDialog = dialog.copy(isSaving = true, error = null))
         viewModelScope.launch {
             itemRepository.createItem(
-                name       = dialog.name.trim(),
-                createdBy  = state.currentUserId,
-                imageUrl   = dialog.imageUrl.trim().takeIf { it.isNotEmpty() }
+                name      = dialog.name.trim(),
+                createdBy = state.currentUserId,
+                imageUrl  = dialog.imageUrl
             )
                 .onSuccess { loadAllData() }
                 .onFailure { e ->
@@ -262,6 +285,7 @@ class UserViewModel(
                     evaluationRepository     = evaluationRepo,
                     itemRepository           = itemRepo,
                     featureRepository        = featureRepo,
+                    storageRepository        = RemoteStorageRepository(),
                     loadFeatureScoresUseCase = LoadFeatureScoresUseCase(
                         itemRepository       = itemRepo,
                         featureRepository    = featureRepo,

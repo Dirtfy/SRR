@@ -35,7 +35,9 @@ sealed class UserUiState {
 
         data class AddItemDialogState(
             val name: String = "",
-            val imageUrl: String = "",
+            val imageUri: android.net.Uri? = null,
+            val imageUrl: String? = null,
+            val isUploadingImage: Boolean = false,
             val isSaving: Boolean = false,
             val error: String? = null
         )

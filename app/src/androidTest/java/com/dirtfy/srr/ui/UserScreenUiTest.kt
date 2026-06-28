@@ -80,7 +80,7 @@ class UserScreenUiTest {
                 onOpenAddItemDialog        = {},
                 onOpenAddFeatureDialog     = {},
                 onAddItemNameChange        = {},
-                onAddItemImageUrlChange    = {},
+                onAddItemImagePicked       = {},
                 onAddFeatureNameChange     = {},
                 onDismissAddDialog         = {},
                 onAddItem                  = {},

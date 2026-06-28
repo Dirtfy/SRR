@@ -1,5 +1,10 @@
 package com.dirtfy.srr.ui.performer.user
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,6 +13,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.*
@@ -42,7 +48,7 @@ fun UserScreen(
     onOpenAddItemDialog: () -> Unit,
     onOpenAddFeatureDialog: () -> Unit,
     onAddItemNameChange: (String) -> Unit,
-    onAddItemImageUrlChange: (String) -> Unit,
+    onAddItemImagePicked: (Uri) -> Unit,
     onAddFeatureNameChange: (String) -> Unit,
     onDismissAddDialog: () -> Unit,
     onAddItem: () -> Unit,
@@ -52,6 +58,10 @@ fun UserScreen(
     onConfirmDelete: () -> Unit,
     onDismissDeleteConfirmation: () -> Unit
 ) {
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? -> uri?.let { onAddItemImagePicked(it) } }
+
     Box(modifier = modifier.fillMaxSize()) {
         when (uiState) {
             is UserUiState.Loading -> {
@@ -84,24 +94,17 @@ fun UserScreen(
                     onRequestDeleteFeature      = onRequestDeleteFeature
                 )
                 uiState.addItemDialog?.let { dialog ->
-                    AddDialog(
-                        title        = "Add Item",
-                        state        = dialog.name,
-                        isSaving     = dialog.isSaving,
-                        error        = dialog.error,
-                        onNameChange = onAddItemNameChange,
-                        onConfirm    = onAddItem,
-                        onDismiss    = onDismissAddDialog
-                    ) {
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value         = dialog.imageUrl,
-                            onValueChange = onAddItemImageUrlChange,
-                            label         = { Text("Image URL (optional)") },
-                            singleLine    = true,
-                            modifier      = Modifier.fillMaxWidth()
-                        )
-                    }
+                    AddItemDialog(
+                        dialog        = dialog,
+                        onNameChange  = onAddItemNameChange,
+                        onChooseImage = {
+                            imagePickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        onConfirm     = onAddItem,
+                        onDismiss     = onDismissAddDialog
+                    )
                 }
                 uiState.addFeatureDialog?.let { dialog ->
                     AddDialog(
@@ -559,6 +562,101 @@ private fun EvaluationEditorSheet(
 // ---------------------------------------------------------------------------
 
 @Composable
+private fun AddItemDialog(
+    dialog: UserUiState.Ready.AddItemDialogState,
+    onNameChange: (String) -> Unit,
+    onChooseImage: () -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title            = { Text("Add Item") },
+        text             = {
+            Column {
+                OutlinedTextField(
+                    value         = dialog.name,
+                    onValueChange = onNameChange,
+                    label         = { Text("Name") },
+                    singleLine    = true,
+                    isError       = dialog.error != null,
+                    modifier      = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable(enabled = !dialog.isSaving) { onChooseImage() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (dialog.imageUri != null) {
+                        AsyncImage(
+                            model              = dialog.imageUri,
+                            contentDescription = null,
+                            contentScale       = ContentScale.Crop,
+                            modifier           = Modifier.fillMaxSize()
+                        )
+                        if (dialog.isUploadingImage) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector        = Icons.Default.AddPhotoAlternate,
+                                contentDescription = null,
+                                modifier           = Modifier.size(36.dp),
+                                tint               = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text  = "Tap to add image (optional)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                if (dialog.error != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text  = dialog.error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = dialog.name.isNotBlank() && !dialog.isSaving && !dialog.isUploadingImage
+            ) {
+                if (dialog.isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Add")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !dialog.isSaving && !dialog.isUploadingImage) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
 private fun AddDialog(
     title: String,
     state: String,
@@ -566,8 +664,7 @@ private fun AddDialog(
     error: String?,
     onNameChange: (String) -> Unit,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    extraContent: @Composable ColumnScope.() -> Unit = {}
+    onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -590,7 +687,6 @@ private fun AddDialog(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
-                extraContent()
             }
         },
         confirmButton = {
