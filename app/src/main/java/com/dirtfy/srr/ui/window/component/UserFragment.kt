@@ -1,11 +1,13 @@
 package com.dirtfy.srr.ui.window.component
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,8 +53,11 @@ class UserFragment : BaseFragment() {
 
     @Composable
     override fun TopBarActions() {
-        IconButton(onClick = { (activity as? MainActivity)?.signOut() }) {
-            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign out")
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            AccountLabel()
+            IconButton(onClick = { (activity as? MainActivity)?.signOut() }) {
+                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign out")
+            }
         }
     }
 
