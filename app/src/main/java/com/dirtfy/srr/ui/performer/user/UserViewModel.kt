@@ -1,5 +1,6 @@
 package com.dirtfy.srr.ui.performer.user
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -274,7 +275,7 @@ class UserViewModel(
     }
 
     companion object {
-        fun factory(): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        fun factory(application: Application): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 val evaluationRepo = RemoteEvaluationRepository()
@@ -285,7 +286,7 @@ class UserViewModel(
                     evaluationRepository     = evaluationRepo,
                     itemRepository           = itemRepo,
                     featureRepository        = featureRepo,
-                    storageRepository        = RemoteStorageRepository(),
+                    storageRepository        = RemoteStorageRepository(application),
                     loadFeatureScoresUseCase = LoadFeatureScoresUseCase(
                         itemRepository       = itemRepo,
                         featureRepository    = featureRepo,

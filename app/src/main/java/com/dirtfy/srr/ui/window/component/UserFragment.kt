@@ -16,7 +16,7 @@ import com.dirtfy.srr.ui.window.MainActivity
 
 class UserFragment : BaseFragment() {
 
-    private val viewModel: UserViewModel by viewModels { UserViewModel.factory() }
+    private val viewModel: UserViewModel by viewModels { UserViewModel.factory(requireActivity().application) }
 
     override val currentRoute = "my"
 
