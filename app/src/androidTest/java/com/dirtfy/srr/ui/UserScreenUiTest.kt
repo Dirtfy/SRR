@@ -142,9 +142,8 @@ class UserScreenUiTest {
             activeTab = UserUiState.Tab.FEATURES,
             evaluatedFeatureIds = emptySet()
         ))
-        // featForeign not evaluated → "Tap to evaluate" shown
-        // featOwned has "Added by you" which takes priority over "Tap to evaluate"
-        composeTestRule.onAllNodesWithText("Tap to evaluate").assertCountEquals(1)
+        // Both featOwned (owner, not yet evaluated) and featForeign (not evaluated) show the hint
+        composeTestRule.onAllNodesWithText("Tap to evaluate").assertCountEquals(2)
     }
 
     @Test
@@ -162,8 +161,9 @@ class UserScreenUiTest {
             activeTab = UserUiState.Tab.FEATURES,
             evaluatorCountByFeature = mapOf(featOwned.id to 2, featForeign.id to 5)
         ))
-        composeTestRule.onNodeWithText("2 evaluated").assertIsDisplayed()
-        composeTestRule.onNodeWithText("5 evaluated").assertIsDisplayed()
+        // Count is shown as "N / 3" sub-label
+        composeTestRule.onNodeWithText("2 / 3").assertIsDisplayed()
+        composeTestRule.onNodeWithText("5 / 3").assertIsDisplayed()
     }
 
     @Test
@@ -172,8 +172,8 @@ class UserScreenUiTest {
             activeTab = UserUiState.Tab.FEATURES,
             evaluatorCountByFeature = emptyMap()
         ))
-        // Both features have 0 evaluators → "0 evaluated" appears twice
-        composeTestRule.onAllNodesWithText("0 evaluated").assertCountEquals(2)
+        // Both features have 0 evaluators → "0%" appears twice
+        composeTestRule.onAllNodesWithText("0%").assertCountEquals(2)
     }
 
     // ---------------------------------------------------------------------------

@@ -194,10 +194,9 @@ class CompilationScreenUiTest {
         // Feature labels
         composeTestRule.onNodeWithText("Performance").assertIsDisplayed()
         composeTestRule.onNodeWithText("Stability").assertIsDisplayed()
-        // Scores: phone has 8.0 for Performance, null for Stability
+        // Scores: phone has 8.0 for Performance, null for Stability (voteCount=2, needs 1 more)
         composeTestRule.onNodeWithText("8.0").assertIsDisplayed()
-        // Null score renders as "—"
-        composeTestRule.onNodeWithText("—").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Needs 1 more").assertIsDisplayed()
     }
 
     @Test
@@ -242,8 +241,8 @@ class CompilationScreenUiTest {
     @Test
     fun featureDetail_nullScoresShowDash() {
         setScreen(readyState(selectedFeature = stab))
-        // Stability has null for all items → three "—" nodes
-        composeTestRule.onAllNodesWithText("—").assertCountEquals(3)
+        // Stability has null for all 3 items (voteCount=2, threshold=3 → needs 1 more each)
+        composeTestRule.onAllNodesWithText("Needs 1 more").assertCountEquals(3)
     }
 
     // ---------------------------------------------------------------------------
