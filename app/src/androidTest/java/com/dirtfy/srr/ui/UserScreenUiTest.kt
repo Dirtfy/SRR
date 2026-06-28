@@ -1,5 +1,6 @@
 package com.dirtfy.srr.ui
 
+import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -228,6 +229,64 @@ class UserScreenUiTest {
             addItemDialog = UserUiState.Ready.AddItemDialogState(name = "Tablet")
         ))
         composeTestRule.onNodeWithText("Add").assertIsDisplayed()
+    }
+
+    // ---------------------------------------------------------------------------
+    // Add item dialog — image picker states
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun addItemDialog_noImage_showsPlaceholderText() {
+        setScreen(readyState(addItemDialog = UserUiState.Ready.AddItemDialogState(name = "")))
+        composeTestRule.onNodeWithText("Tap to add image (optional)").assertIsDisplayed()
+    }
+
+    @Test
+    fun addItemDialog_whileUploading_addAndCancelAreDisabled() {
+        setScreen(readyState(
+            addItemDialog = UserUiState.Ready.AddItemDialogState(
+                name             = "Tablet",
+                imageUri         = Uri.parse("file:///test/image.jpg"),
+                isUploadingImage = true
+            )
+        ))
+        composeTestRule.onNodeWithText("Add").assertIsNotEnabled()
+        composeTestRule.onNodeWithText("Cancel").assertIsNotEnabled()
+    }
+
+    @Test
+    fun addItemDialog_blankNameWhileUploading_addStillDisabled() {
+        setScreen(readyState(
+            addItemDialog = UserUiState.Ready.AddItemDialogState(
+                name             = "",
+                isUploadingImage = true
+            )
+        ))
+        composeTestRule.onNodeWithText("Add").assertIsNotEnabled()
+    }
+
+    @Test
+    fun addItemDialog_uploadError_showsErrorText() {
+        setScreen(readyState(
+            addItemDialog = UserUiState.Ready.AddItemDialogState(
+                name  = "Tablet",
+                error = "Image upload failed: permission denied"
+            )
+        ))
+        composeTestRule.onNodeWithText("Image upload failed: permission denied").assertIsDisplayed()
+    }
+
+    @Test
+    fun addItemDialog_uploadComplete_addButtonEnabled() {
+        setScreen(readyState(
+            addItemDialog = UserUiState.Ready.AddItemDialogState(
+                name             = "Tablet",
+                imageUri         = Uri.parse("file:///test/image.jpg"),
+                imageUrl         = "https://storage.example.com/items/uuid.jpg",
+                isUploadingImage = false
+            )
+        ))
+        composeTestRule.onNodeWithText("Add").assertIsEnabled()
     }
 
     // ---------------------------------------------------------------------------
