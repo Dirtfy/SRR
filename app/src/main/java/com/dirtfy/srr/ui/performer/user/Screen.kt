@@ -26,6 +26,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import com.dirtfy.srr.core.model.Feature
 import com.dirtfy.srr.core.model.Item
 import sh.calvin.reorderable.ReorderableItem
@@ -423,12 +426,31 @@ private fun UserItemDetailContent(
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 if (url != null) {
-                    AsyncImage(
+                    SubcomposeAsyncImage(
                         model              = url,
                         contentDescription = item.name,
                         contentScale       = ContentScale.Crop,
                         modifier           = Modifier.fillMaxSize()
-                    )
+                    ) {
+                        when (painter.state) {
+                            is AsyncImagePainter.State.Loading -> {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                            is AsyncImagePainter.State.Error -> {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector        = Icons.Default.AddPhotoAlternate,
+                                        contentDescription = "Image failed to load",
+                                        tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier           = Modifier.size(48.dp)
+                                    )
+                                }
+                            }
+                            else -> SubcomposeAsyncImageContent()
+                        }
+                    }
                 }
                 if (isOwner) {
                     IconButton(
