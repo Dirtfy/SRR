@@ -170,10 +170,14 @@ class UserViewModel(
         val state = _uiState.value as? UserUiState.Ready ?: return
         val dialog = state.editItemImageDialog ?: return
         if (dialog.isUploadingImage || dialog.imageUrl == null) return
+        val oldImageUrl = state.items.find { it.id == dialog.itemId }?.imageUrl
         _uiState.value = state.copy(editItemImageDialog = dialog.copy(isSaving = true, error = null))
         viewModelScope.launch {
             itemRepository.updateItemImage(dialog.itemId, dialog.imageUrl)
-                .onSuccess { loadAllData(selectedItemId = dialog.itemId) }
+                .onSuccess {
+                    if (oldImageUrl != null) storageRepository.deleteImage(oldImageUrl)
+                    loadAllData(selectedItemId = dialog.itemId)
+                }
                 .onFailure { e ->
                     val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
                     val d = s.editItemImageDialog ?: return@onFailure
@@ -183,8 +187,12 @@ class UserViewModel(
     }
 
     fun onDismissEditItemImageDialog() {
-        (_uiState.value as? UserUiState.Ready)?.let {
-            _uiState.value = it.copy(editItemImageDialog = null)
+        val state = _uiState.value as? UserUiState.Ready ?: return
+        val uploadedUrl = state.editItemImageDialog?.imageUrl
+        _uiState.value = state.copy(editItemImageDialog = null)
+        // Clean up any image that was uploaded but not saved
+        if (uploadedUrl != null) {
+            viewModelScope.launch { storageRepository.deleteImage(uploadedUrl) }
         }
     }
 
@@ -314,10 +322,12 @@ class UserViewModel(
         viewModelScope.launch {
             when (target.type) {
                 UserUiState.Ready.DeleteTargetType.ITEM -> {
+                    val imageUrl = state.items.find { it.id == target.id }?.imageUrl
                     itemRepository.deleteItem(target.id).also { result ->
                         if (result.isSuccess) {
                             val featureIds = state.features.map { it.id }
                             evaluationRepository.removeItemFromEvaluations(target.id, featureIds)
+                            if (imageUrl != null) storageRepository.deleteImage(imageUrl)
                         }
                     }
                 }

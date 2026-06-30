@@ -18,4 +18,8 @@ class RemoteStorageRepository(private val context: Context) : StorageRepository 
         ref.putFile(uri, metadata).await()
         ref.downloadUrl.await().toString()
     }
+
+    override suspend fun deleteImage(url: String): Result<Unit> = runCatching {
+        Firebase.storage.getReferenceFromUrl(url).delete().await()
+    }
 }
