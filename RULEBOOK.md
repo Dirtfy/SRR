@@ -74,6 +74,15 @@ Do not let changes accumulate across multiple features without committing.
 Never push to remote until the Tester has explicitly approved the current commit.
 If instrumented tests are also required (see below), they must also pass before pushing.
 
+### Test Coverage Requirement
+
+Every new feature or bug fix must include **both** a unit test and an instrumented test targeting the specific new behavior, written in the **same commit** as the feature.
+
+- Unit test goes in `app/src/test/` — tests pure logic with no Android or network dependencies.
+- Instrumented test goes in `app/src/androidTest/` — tests integration with Firebase, Firestore, or the UI against the emulator.
+- Tests must cover the added behavior, not just the pre-existing scaffolding.
+- Do not ship a feature without its tests. The commit is not complete until both exist and pass.
+
 ---
 
 ## Test Commands

@@ -134,6 +134,58 @@ class UserViewModel(
         }
     }
 
+    fun onOpenEditItemImageDialog(itemId: String) {
+        (_uiState.value as? UserUiState.Ready)?.let {
+            _uiState.value = it.copy(editItemImageDialog = UserUiState.Ready.EditItemImageDialogState(itemId))
+        }
+    }
+
+    fun onEditItemImagePicked(uri: Uri) {
+        val state = _uiState.value as? UserUiState.Ready ?: return
+        val dialog = state.editItemImageDialog ?: return
+        _uiState.value = state.copy(
+            editItemImageDialog = dialog.copy(imageUri = uri, imageUrl = null, isUploadingImage = true, error = null)
+        )
+        viewModelScope.launch {
+            storageRepository.uploadItemImage(uri)
+                .onSuccess { url ->
+                    val s = _uiState.value as? UserUiState.Ready ?: return@onSuccess
+                    val d = s.editItemImageDialog ?: return@onSuccess
+                    _uiState.value = s.copy(editItemImageDialog = d.copy(imageUrl = url, isUploadingImage = false))
+                }
+                .onFailure { e ->
+                    val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
+                    val d = s.editItemImageDialog ?: return@onFailure
+                    _uiState.value = s.copy(
+                        editItemImageDialog = d.copy(imageUri = null, imageUrl = null, isUploadingImage = false,
+                            error = "Image upload failed: ${e.message}")
+                    )
+                }
+        }
+    }
+
+    fun onSubmitEditItemImage() {
+        val state = _uiState.value as? UserUiState.Ready ?: return
+        val dialog = state.editItemImageDialog ?: return
+        if (dialog.isUploadingImage || dialog.imageUrl == null) return
+        _uiState.value = state.copy(editItemImageDialog = dialog.copy(isSaving = true, error = null))
+        viewModelScope.launch {
+            itemRepository.updateItemImage(dialog.itemId, dialog.imageUrl)
+                .onSuccess { loadAllData() }
+                .onFailure { e ->
+                    val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
+                    val d = s.editItemImageDialog ?: return@onFailure
+                    _uiState.value = s.copy(editItemImageDialog = d.copy(isSaving = false, error = e.message))
+                }
+        }
+    }
+
+    fun onDismissEditItemImageDialog() {
+        (_uiState.value as? UserUiState.Ready)?.let {
+            _uiState.value = it.copy(editItemImageDialog = null)
+        }
+    }
+
     fun onOpenAddItemDialog() {
         (_uiState.value as? UserUiState.Ready)?.let {
             _uiState.value = it.copy(addItemDialog = UserUiState.Ready.AddItemDialogState())
@@ -259,8 +311,20 @@ class UserViewModel(
         _uiState.value = state.copy(deleteConfirmation = null)
         viewModelScope.launch {
             when (target.type) {
-                UserUiState.Ready.DeleteTargetType.ITEM    -> itemRepository.deleteItem(target.id)
-                UserUiState.Ready.DeleteTargetType.FEATURE -> featureRepository.deleteFeature(target.id)
+                UserUiState.Ready.DeleteTargetType.ITEM -> {
+                    itemRepository.deleteItem(target.id).also { result ->
+                        if (result.isSuccess) {
+                            val featureIds = state.features.map { it.id }
+                            evaluationRepository.removeItemFromEvaluations(target.id, featureIds)
+                        }
+                    }
+                }
+                UserUiState.Ready.DeleteTargetType.FEATURE -> {
+                    // Evaluations are deleted first so the feature document still exists
+                    // when the security rule checks features/{featureId}.createdBy.
+                    evaluationRepository.deleteEvaluationsForFeature(target.id)
+                    featureRepository.deleteFeature(target.id)
+                }
             }.onSuccess { loadAllData() }
         }
     }

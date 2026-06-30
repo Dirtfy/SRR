@@ -56,4 +56,14 @@ class RemoteItemRepository : ItemRepository {
         runCatching {
             db.collection("items").document(id).delete().await()
         }
+
+    override suspend fun updateItemImage(id: String, imageUrl: String?): Result<Unit> =
+        runCatching {
+            val update = if (imageUrl != null)
+                mapOf("imageUrl" to imageUrl)
+            else
+                mapOf("imageUrl" to com.google.firebase.firestore.FieldValue.delete())
+            db.collection("items").document(id).update(update).await()
+            Unit
+        }
 }

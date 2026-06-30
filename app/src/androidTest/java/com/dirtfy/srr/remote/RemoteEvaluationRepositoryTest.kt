@@ -52,6 +52,7 @@ class RemoteEvaluationRepositoryTest {
     }
 
     private lateinit var repository: RemoteEvaluationRepository
+    private lateinit var featureRepository: com.dirtfy.srr.remote.repository.RemoteFeatureRepository
 
     private val p = System.currentTimeMillis().toString().takeLast(8)
     private suspend fun signUpWith(tag: String): String {
@@ -72,6 +73,7 @@ class RemoteEvaluationRepositoryTest {
     fun setUp() {
         clearEmulator()
         repository = RemoteEvaluationRepository()
+        featureRepository = com.dirtfy.srr.remote.repository.RemoteFeatureRepository()
     }
 
     @After
@@ -195,5 +197,112 @@ class RemoteEvaluationRepositoryTest {
 
         val result = repository.getEvaluationsForFeature("feature_nonexistent").getOrThrow()
         assertTrue("Must return empty list when feature has no evaluations", result.isEmpty())
+    }
+
+    // -----------------------------------------------------------------------
+    // deleteEvaluationsForFeature
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun deleteEvaluationsForFeature_removesAllEvaluationsForThatFeature() = runBlocking {
+        // Creator creates the feature (so security rule can check createdBy)
+        val uidCreator = signUpWith("delEvCreator")
+        val feature = featureRepository.createFeature("FeatDel_${p}", uidCreator).getOrThrow()
+
+        val uidA = signUpWith("delEvA")
+        repository.submitEvaluation(Evaluation(uidA, feature.id, listOf("item_a", "item_b"))).getOrThrow()
+
+        val uidB = signUpWith("delEvB")
+        repository.submitEvaluation(Evaluation(uidB, feature.id, listOf("item_b", "item_a"))).getOrThrow()
+
+        // Sign back in as creator to delete all evaluations
+        Firebase.auth.signOut()
+        Firebase.auth.signInWithEmailAndPassword("${p}_delEvCreator@t.com", "password123").await()
+
+        val result = repository.deleteEvaluationsForFeature(feature.id)
+        assertTrue("deleteEvaluationsForFeature must succeed", result.isSuccess)
+
+        val remaining = repository.getEvaluationsForFeature(feature.id).getOrThrow()
+        assertTrue("All evaluations for the feature must be gone", remaining.isEmpty())
+    }
+
+    @Test
+    fun deleteEvaluationsForFeature_noopWhenNoneExist() = runBlocking {
+        signUpWith("delEvEmpty")
+        // No feature doc, no evaluations — batch is empty so no Firestore writes (no security check triggered)
+        val result = repository.deleteEvaluationsForFeature("feature_that_never_existed_${p}")
+        assertTrue("deleteEvaluationsForFeature on empty subcollection must succeed", result.isSuccess)
+    }
+
+    @Test
+    fun deleteEvaluationsForFeature_doesNotAffectOtherFeatures() = runBlocking {
+        val uid = signUpWith("delEvOther")
+        val featA = featureRepository.createFeature("FeatA_${p}", uid).getOrThrow()
+        val featB = featureRepository.createFeature("FeatB_${p}", uid).getOrThrow()
+
+        repository.submitEvaluation(Evaluation(uid, featA.id, listOf("item_a"))).getOrThrow()
+        repository.submitEvaluation(Evaluation(uid, featB.id, listOf("item_b"))).getOrThrow()
+
+        repository.deleteEvaluationsForFeature(featA.id).getOrThrow()
+
+        val remainingB = repository.getEvaluationsForFeature(featB.id).getOrThrow()
+        assertEquals("Feature B evaluations must be untouched", 1, remainingB.size)
+    }
+
+    // -----------------------------------------------------------------------
+    // removeItemFromEvaluations
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun removeItemFromEvaluations_stripsItemFromAllEvaluationsAcrossFeatures() = runBlocking {
+        val featureA  = "${p}_feat_rm_a"
+        val featureB  = "${p}_feat_rm_b"
+        val removedId = "item_removed"
+
+        val uid = signUpWith("rmItem")
+        repository.submitEvaluation(Evaluation(uid, featureA, listOf(removedId, "item_x"))).getOrThrow()
+        repository.submitEvaluation(Evaluation(uid, featureB, listOf("item_x", removedId))).getOrThrow()
+
+        repository.removeItemFromEvaluations(removedId, listOf(featureA, featureB)).getOrThrow()
+
+        val evalsA = repository.getEvaluationsForFeature(featureA).getOrThrow()
+        val evalsB = repository.getEvaluationsForFeature(featureB).getOrThrow()
+
+        assertFalse("item_removed must not appear in featureA evals",
+            evalsA.any { removedId in it.orderedItemIds })
+        assertFalse("item_removed must not appear in featureB evals",
+            evalsB.any { removedId in it.orderedItemIds })
+    }
+
+    @Test
+    fun removeItemFromEvaluations_preservesRemainingItemOrder() = runBlocking {
+        val featureId = "${p}_feat_rm_order"
+        val removedId = "item_b"
+
+        val uid = signUpWith("rmOrder")
+        repository.submitEvaluation(
+            Evaluation(uid, featureId, listOf("item_a", removedId, "item_c"))
+        ).getOrThrow()
+
+        repository.removeItemFromEvaluations(removedId, listOf(featureId)).getOrThrow()
+
+        val evals = repository.getEvaluationsForFeature(featureId).getOrThrow()
+        assertEquals(1, evals.size)
+        assertEquals("Remaining items must preserve original relative order",
+            listOf("item_a", "item_c"), evals[0].orderedItemIds)
+    }
+
+    @Test
+    fun removeItemFromEvaluations_noopWhenItemNotInAnyEvaluation() = runBlocking {
+        val featureId = "${p}_feat_rm_noop"
+
+        val uid = signUpWith("rmNoop")
+        repository.submitEvaluation(Evaluation(uid, featureId, listOf("item_a", "item_b"))).getOrThrow()
+
+        val result = repository.removeItemFromEvaluations("item_ghost", listOf(featureId))
+        assertTrue("Must succeed even when item not found in any evaluation", result.isSuccess)
+
+        val evals = repository.getEvaluationsForFeature(featureId).getOrThrow()
+        assertEquals("Evaluation must be unchanged", listOf("item_a", "item_b"), evals[0].orderedItemIds)
     }
 }

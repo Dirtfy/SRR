@@ -97,7 +97,8 @@ Debator reviews → Developer fixes CRITICALs
 
 1. **Before every commit:** Debator reviews the work and writes the debat log. Developer applies every CRITICAL fix.
 2. **Commit gate (unit tests):** Tester runs `./gradlew testDebugUnitTest` and writes the test log. Commit locally only if unit tests pass. Never commit when unit tests fail.
-3. **Commit threshold:** Commit locally when >100 lines have changed or a meaningful milestone is reached. Never accumulate changes across many features without committing.
+3. **Test coverage requirement:** Every new feature or bug fix must include **both** a unit test (`app/src/test/`) and an instrumented test (`app/src/androidTest/`) in the same commit. Tests must target the specific behavior added — not just the existing scaffolding.
+4. **Commit threshold:** Commit locally when >100 lines have changed or a meaningful milestone is reached. Never accumulate changes across many features without committing.
 4. **Push gate (instrumented tests):** Push to remote only after Tester runs instrumented tests and they pass. Do not push on unit-test pass alone.
 5. **Instrumented tests:** Run `./gradlew connectedDebugAndroidTest` only when the user says a device or AVD is connected. If they pass, push all local commits.
    - **Device preference order:** Always use a connected physical device first. Only fall back to AVD if no physical device is available (`adb devices` shows no device).

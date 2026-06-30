@@ -310,4 +310,44 @@ class RemoteItemFeatureRepositoryTest {
         val ids = featureRepository.getAllFeatures().getOrThrow().map { it.id }
         assertTrue("Feature must still exist after failed delete", feature.id in ids)
     }
+
+    // -----------------------------------------------------------------------
+    // Item: updateItemImage
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun updateItemImage_setsImageUrl() = runBlocking {
+        val uid  = signUpWith("imgset")
+        val item = itemRepository.createItem("WithImage", uid).getOrThrow()
+        assertNull("imageUrl must be null initially", item.imageUrl)
+
+        itemRepository.updateItemImage(item.id, "https://example.com/image.jpg").getOrThrow()
+
+        val items = itemRepository.getAllItems().getOrThrow()
+        val updated = items.find { it.id == item.id }!!
+        assertEquals("imageUrl must be updated", "https://example.com/image.jpg", updated.imageUrl)
+    }
+
+    @Test
+    fun updateItemImage_updatesExistingUrl() = runBlocking {
+        val uid  = signUpWith("imgupdate")
+        val item = itemRepository.createItem("ImgItem", uid, "https://old.example.com/old.jpg").getOrThrow()
+
+        itemRepository.updateItemImage(item.id, "https://new.example.com/new.jpg").getOrThrow()
+
+        val updated = itemRepository.getAllItems().getOrThrow().find { it.id == item.id }!!
+        assertEquals("imageUrl must reflect the new value", "https://new.example.com/new.jpg", updated.imageUrl)
+    }
+
+    @Test
+    fun updateItemImage_doesNotChangeNameOrOwner() = runBlocking {
+        val uid  = signUpWith("imgmeta")
+        val item = itemRepository.createItem("Unchanged", uid).getOrThrow()
+
+        itemRepository.updateItemImage(item.id, "https://example.com/pic.jpg").getOrThrow()
+
+        val updated = itemRepository.getAllItems().getOrThrow().find { it.id == item.id }!!
+        assertEquals("name must be unchanged", "Unchanged", updated.name)
+        assertEquals("createdBy must be unchanged", uid, updated.createdBy)
+    }
 }

@@ -23,7 +23,8 @@ sealed class UserUiState {
         val evaluationEditor: EvaluationEditorState? = null,
         val addItemDialog: AddItemDialogState? = null,
         val addFeatureDialog: AddFeatureDialogState? = null,
-        val deleteConfirmation: DeleteConfirmationState? = null
+        val deleteConfirmation: DeleteConfirmationState? = null,
+        val editItemImageDialog: EditItemImageDialogState? = null
     ) : UserUiState() {
 
         data class EvaluationEditorState(
@@ -53,6 +54,15 @@ sealed class UserUiState {
             val id: String,
             val name: String,
             val type: DeleteTargetType
+        )
+
+        data class EditItemImageDialogState(
+            val itemId: String,
+            val imageUri: android.net.Uri? = null,
+            val imageUrl: String? = null,
+            val isUploadingImage: Boolean = false,
+            val isSaving: Boolean = false,
+            val error: String? = null
         )
     }
 

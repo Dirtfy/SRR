@@ -43,4 +43,39 @@ class RemoteEvaluationRepository : EvaluationRepository {
                     )
                 }
         }
+
+    override suspend fun deleteEvaluationsForFeature(featureId: String): Result<Unit> =
+        runCatching {
+            val docs = db.collection("evaluations").document(featureId)
+                .collection("userEvaluations")
+                .get().await().documents
+            if (docs.isEmpty()) return@runCatching
+            val batch = db.batch()
+            docs.forEach { batch.delete(it.reference) }
+            batch.commit().await()
+            Unit
+        }
+
+    override suspend fun removeItemFromEvaluations(itemId: String, featureIds: List<String>): Result<Unit> =
+        runCatching {
+            for (featureId in featureIds) {
+                val docs = db.collection("evaluations").document(featureId)
+                    .collection("userEvaluations")
+                    .get().await().documents
+                val affected = docs.filter { doc ->
+                    @Suppress("UNCHECKED_CAST")
+                    (doc.get("orderedItemIds") as? List<String>)?.contains(itemId) == true
+                }
+                if (affected.isEmpty()) continue
+                val batch = db.batch()
+                affected.forEach { doc ->
+                    @Suppress("UNCHECKED_CAST")
+                    val updated = (doc.get("orderedItemIds") as? List<String>)
+                        ?.filter { it != itemId } ?: emptyList()
+                    batch.update(doc.reference, "orderedItemIds", updated)
+                }
+                batch.commit().await()
+            }
+            Unit
+        }
 }

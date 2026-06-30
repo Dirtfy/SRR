@@ -86,7 +86,11 @@ class UserFragment : BaseFragment() {
             onRequestDeleteItem           = viewModel::onRequestDeleteItem,
             onRequestDeleteFeature        = viewModel::onRequestDeleteFeature,
             onConfirmDelete               = viewModel::onConfirmDelete,
-            onDismissDeleteConfirmation   = viewModel::onDismissDeleteConfirmation
+            onDismissDeleteConfirmation   = viewModel::onDismissDeleteConfirmation,
+            onOpenEditItemImageDialog     = viewModel::onOpenEditItemImageDialog,
+            onEditItemImagePicked         = viewModel::onEditItemImagePicked,
+            onSubmitEditItemImage         = viewModel::onSubmitEditItemImage,
+            onDismissEditItemImageDialog  = viewModel::onDismissEditItemImageDialog
         )
     }
 }

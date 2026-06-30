@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -56,11 +57,19 @@ fun UserScreen(
     onRequestDeleteItem: (id: String, name: String) -> Unit,
     onRequestDeleteFeature: (id: String, name: String) -> Unit,
     onConfirmDelete: () -> Unit,
-    onDismissDeleteConfirmation: () -> Unit
+    onDismissDeleteConfirmation: () -> Unit,
+    onOpenEditItemImageDialog: (itemId: String) -> Unit,
+    onEditItemImagePicked: (Uri) -> Unit,
+    onSubmitEditItemImage: () -> Unit,
+    onDismissEditItemImageDialog: () -> Unit
 ) {
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? -> uri?.let { onAddItemImagePicked(it) } }
+
+    val editImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? -> uri?.let { onEditItemImagePicked(it) } }
 
     Box(modifier = modifier.fillMaxSize()) {
         when (uiState) {
@@ -91,7 +100,8 @@ fun UserScreen(
                     onOpenAddItemDialog         = onOpenAddItemDialog,
                     onOpenAddFeatureDialog      = onOpenAddFeatureDialog,
                     onRequestDeleteItem         = onRequestDeleteItem,
-                    onRequestDeleteFeature      = onRequestDeleteFeature
+                    onRequestDeleteFeature      = onRequestDeleteFeature,
+                    onOpenEditItemImageDialog   = onOpenEditItemImageDialog
                 )
                 uiState.addItemDialog?.let { dialog ->
                     AddItemDialog(
@@ -132,6 +142,18 @@ fun UserScreen(
                         }
                     )
                 }
+                uiState.editItemImageDialog?.let { dialog ->
+                    EditItemImageDialog(
+                        dialog        = dialog,
+                        onChooseImage = {
+                            editImagePickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        onConfirm     = onSubmitEditItemImage,
+                        onDismiss     = onDismissEditItemImageDialog
+                    )
+                }
             }
         }
     }
@@ -153,7 +175,8 @@ private fun UserReadyContent(
     onOpenAddItemDialog: () -> Unit,
     onOpenAddFeatureDialog: () -> Unit,
     onRequestDeleteItem: (id: String, name: String) -> Unit,
-    onRequestDeleteFeature: (id: String, name: String) -> Unit
+    onRequestDeleteFeature: (id: String, name: String) -> Unit,
+    onOpenEditItemImageDialog: (itemId: String) -> Unit
 ) {
     when {
         state.evaluationEditor != null -> {
@@ -176,9 +199,11 @@ private fun UserReadyContent(
         }
         state.selectedItem != null -> {
             UserItemDetailContent(
-                item                   = state.selectedItem,
-                features               = state.features,
-                myEvaluationByFeature  = state.myEvaluationByFeature
+                item                      = state.selectedItem,
+                features                  = state.features,
+                currentUserId             = state.currentUserId,
+                myEvaluationByFeature     = state.myEvaluationByFeature,
+                onEditImage               = onOpenEditItemImageDialog
             )
         }
         else -> {
@@ -382,23 +407,49 @@ private fun FeaturesTabContent(
 private fun UserItemDetailContent(
     item: Item,
     features: List<Feature>,
-    myEvaluationByFeature: Map<String, List<String>>
+    currentUserId: String,
+    myEvaluationByFeature: Map<String, List<String>>,
+    onEditImage: (itemId: String) -> Unit
 ) {
+    val isOwner = item.createdBy == currentUserId && currentUserId.isNotEmpty()
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
         item {
             val url = item.imageUrl?.takeIf { it.isNotBlank() }
-            if (url != null) {
-                AsyncImage(
-                    model              = url,
-                    contentDescription = item.name,
-                    contentScale       = ContentScale.Crop,
-                    modifier           = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
-                Spacer(Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                if (url != null) {
+                    AsyncImage(
+                        model              = url,
+                        contentDescription = item.name,
+                        contentScale       = ContentScale.Crop,
+                        modifier           = Modifier.fillMaxSize()
+                    )
+                }
+                if (isOwner) {
+                    IconButton(
+                        onClick  = { onEditImage(item.id) },
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Default.Edit,
+                            contentDescription = "Edit image",
+                            tint               = MaterialTheme.colorScheme.onPrimary,
+                            modifier           = Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.primary,
+                                    RoundedCornerShape(50)
+                                )
+                                .padding(6.dp)
+                        )
+                    }
+                }
             }
+            Spacer(Modifier.height(16.dp))
             Text(item.name, style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(16.dp))
             Text("My Ranking per Feature", style = MaterialTheme.typography.titleMedium)
@@ -718,6 +769,93 @@ private fun AddDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isSaving) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Edit item image dialog
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun EditItemImageDialog(
+    dialog: UserUiState.Ready.EditItemImageDialogState,
+    onChooseImage: () -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title            = { Text("Update Image") },
+        text             = {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable(enabled = !dialog.isSaving) { onChooseImage() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (dialog.imageUri != null) {
+                        AsyncImage(
+                            model              = dialog.imageUri,
+                            contentDescription = null,
+                            contentScale       = ContentScale.Crop,
+                            modifier           = Modifier.fillMaxSize()
+                        )
+                        if (dialog.isUploadingImage) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)),
+                                contentAlignment = Alignment.Center
+                            ) { CircularProgressIndicator() }
+                        }
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector        = Icons.Default.AddPhotoAlternate,
+                                contentDescription = null,
+                                modifier           = Modifier.size(36.dp),
+                                tint               = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text  = "Tap to choose a new image",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                if (dialog.error != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text  = dialog.error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = dialog.imageUrl != null && !dialog.isSaving && !dialog.isUploadingImage
+            ) {
+                if (dialog.isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Save")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !dialog.isSaving && !dialog.isUploadingImage) {
                 Text("Cancel")
             }
         }

@@ -86,10 +86,14 @@ class UserScreenUiTest {
                 onDismissAddDialog         = {},
                 onAddItem                  = {},
                 onAddFeature               = {},
-                onRequestDeleteItem        = { _, _ -> },
-                onRequestDeleteFeature     = { _, _ -> },
-                onConfirmDelete            = {},
-                onDismissDeleteConfirmation = {}
+                onRequestDeleteItem           = { _, _ -> },
+                onRequestDeleteFeature        = { _, _ -> },
+                onConfirmDelete               = {},
+                onDismissDeleteConfirmation   = {},
+                onOpenEditItemImageDialog     = {},
+                onEditItemImagePicked         = {},
+                onSubmitEditItemImage         = {},
+                onDismissEditItemImageDialog  = {}
             )
         }
     }
