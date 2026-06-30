@@ -4,16 +4,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Unit tests for item image URL handling logic used around updateItemImage.
- *
- * Validates the URL normalisation contract: blank/empty strings are treated as
- * "no image" (null) before being persisted, so callers never write an empty
- * imageUrl to Firestore.
+ * Unit tests for item image URL handling logic used around updateItemImage,
+ * and for the post-update item lookup used to restore navigation state.
  */
 class ItemImageUpdateLogicTest {
 
     private fun normaliseImageUrl(raw: String?): String? =
         raw?.trim()?.takeIf { it.isNotEmpty() }
+
+    /** Mirrors the lookup inside UserViewModel.loadAllData(selectedItemId). */
+    private data class Item(val id: String, val name: String)
+    private fun restoreSelectedItem(id: String?, items: List<Item>): Item? =
+        id?.let { items.find { item -> item.id == it } }
 
     @Test
     fun normalise_nonEmptyUrl_returnsUrl() {
@@ -40,5 +42,36 @@ class ItemImageUpdateLogicTest {
     fun normalise_urlWithLeadingTrailingSpaces_returnsTrimmed() {
         val result = normaliseImageUrl("  https://example.com/img.png  ")
         assertEquals("https://example.com/img.png", result)
+    }
+
+    // -----------------------------------------------------------------------
+    // Navigation restore: item lookup after reload
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun restoreSelectedItem_findsItemById() {
+        val items = listOf(Item("id_a", "Alpha"), Item("id_b", "Beta"))
+        val restored = restoreSelectedItem("id_b", items)
+        assertEquals(Item("id_b", "Beta"), restored)
+    }
+
+    @Test
+    fun restoreSelectedItem_returnsNullWhenIdNotFound() {
+        val items = listOf(Item("id_a", "Alpha"))
+        val restored = restoreSelectedItem("id_missing", items)
+        assertNull(restored)
+    }
+
+    @Test
+    fun restoreSelectedItem_returnsNullWhenIdIsNull() {
+        val items = listOf(Item("id_a", "Alpha"))
+        val restored = restoreSelectedItem(null, items)
+        assertNull(restored)
+    }
+
+    @Test
+    fun restoreSelectedItem_returnsNullWhenListIsEmpty() {
+        val restored = restoreSelectedItem("id_a", emptyList())
+        assertNull(restored)
     }
 }

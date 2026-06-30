@@ -43,7 +43,7 @@ class UserViewModel(
         loadAllData()
     }
 
-    fun loadAllData() {
+    fun loadAllData(selectedItemId: String? = null) {
         val previousTab = (_uiState.value as? UserUiState.Ready)?.activeTab ?: UserUiState.Tab.ITEMS
         viewModelScope.launch {
             _uiState.value = UserUiState.Loading
@@ -60,6 +60,7 @@ class UserViewModel(
                         }
                     val evaluatorCountByFeature = output.evaluationsByFeature
                         .mapValues { (_, evals) -> evals.size }
+                    val selectedItem = selectedItemId?.let { id -> output.items.find { it.id == id } }
                     _uiState.value = UserUiState.Ready(
                         items                    = output.items,
                         features                 = output.features,
@@ -68,7 +69,8 @@ class UserViewModel(
                         evaluatedFeatureIds      = evaluatedFeatureIds,
                         myEvaluationByFeature    = myEvaluationByFeature,
                         evaluatorCountByFeature  = evaluatorCountByFeature,
-                        activeTab                = previousTab
+                        activeTab                = previousTab,
+                        selectedItem             = selectedItem
                     )
                 }
                 .onFailure { e -> _uiState.value = UserUiState.Error(e.message ?: "Failed to load") }
@@ -171,7 +173,7 @@ class UserViewModel(
         _uiState.value = state.copy(editItemImageDialog = dialog.copy(isSaving = true, error = null))
         viewModelScope.launch {
             itemRepository.updateItemImage(dialog.itemId, dialog.imageUrl)
-                .onSuccess { loadAllData() }
+                .onSuccess { loadAllData(selectedItemId = dialog.itemId) }
                 .onFailure { e ->
                     val s = _uiState.value as? UserUiState.Ready ?: return@onFailure
                     val d = s.editItemImageDialog ?: return@onFailure

@@ -100,12 +100,23 @@ Adapt these to the project's build system. Default for Android/Gradle projects:
 ### Instrumented Test Rules
 
 - Do **not** run instrumented tests unless the user explicitly says a device or AVD is connected.
+- Always run instrumented tests in the **debug variant only**: `connectedDebugAndroidTest`. Never use `connectedReleaseAndroidTest`.
 - When the user confirms a device is connected, run instrumented tests and, if they pass, push all pending local commits.
-- For **physical devices** using Firebase Local Emulator Suite, run ADB reverse forwarding first:
+- Before running, start **all three** Firebase emulators: `firebase emulators:start --only auth,firestore,storage --project shared-relative-rank`
+- For **physical devices** using Firebase Local Emulator Suite, run ADB reverse forwarding for all three emulator ports:
   ```bash
   adb reverse tcp:8080 tcp:8080   # Firestore emulator
   adb reverse tcp:9099 tcp:9099   # Auth emulator
+  adb reverse tcp:9199 tcp:9199   # Storage emulator
   ```
+- **Run tests by class, not all at once.** On Samsung physical devices, a single long instrumented session (~90 s) triggers Samsung Backup which kills the app process mid-run. Run each test class as a separate Gradle invocation:
+  ```bash
+  ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.dirtfy.srr.remote.RemoteEvaluationRepositoryTest
+  ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.dirtfy.srr.remote.RemoteItemFeatureRepositoryTest
+  ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.dirtfy.srr.remote.StorageUploadTest
+  ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.dirtfy.srr.ui.UserScreenUiTest
+  ```
+  Each class finishes in ≤ 50 s — well within the Samsung Backup window.
 - For **AVD (Android Virtual Device)**, use `10.0.2.2` instead of `localhost` in test code to reach host-side emulators.
 
 ---
