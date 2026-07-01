@@ -7,6 +7,7 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
 import com.dirtfy.srr.core.repository.StorageRepository
+import com.dirtfy.srr.core.util.extractStoragePath
 import com.dirtfy.srr.core.util.planResize
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.StorageMetadata
@@ -33,7 +34,12 @@ class RemoteStorageRepository(private val context: Context) : StorageRepository 
     }
 
     override suspend fun deleteImage(url: String): Result<Unit> = runCatching {
-        Firebase.storage.getReferenceFromUrl(url).delete().await()
+        val path = extractStoragePath(url)
+        if (path != null) {
+            Firebase.storage.reference.child(path).delete().await()
+        } else {
+            Firebase.storage.getReferenceFromUrl(url).delete().await()
+        }
     }
 
     /**

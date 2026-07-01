@@ -64,7 +64,9 @@ fun UserScreen(
     onOpenEditItemImageDialog: (itemId: String) -> Unit,
     onEditItemImagePicked: (Uri) -> Unit,
     onSubmitEditItemImage: () -> Unit,
-    onDismissEditItemImageDialog: () -> Unit
+    onDismissEditItemImageDialog: () -> Unit,
+    onShowItemImagePreview: (url: String) -> Unit,
+    onDismissItemImagePreview: () -> Unit
 ) {
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -104,7 +106,8 @@ fun UserScreen(
                     onOpenAddFeatureDialog      = onOpenAddFeatureDialog,
                     onRequestDeleteItem         = onRequestDeleteItem,
                     onRequestDeleteFeature      = onRequestDeleteFeature,
-                    onOpenEditItemImageDialog   = onOpenEditItemImageDialog
+                    onOpenEditItemImageDialog   = onOpenEditItemImageDialog,
+                    onShowItemImagePreview      = onShowItemImagePreview
                 )
                 uiState.addItemDialog?.let { dialog ->
                     AddItemDialog(
@@ -157,6 +160,9 @@ fun UserScreen(
                         onDismiss     = onDismissEditItemImageDialog
                     )
                 }
+                uiState.imagePreviewUrl?.let { url ->
+                    ImagePreviewDialog(url = url, onDismiss = onDismissItemImagePreview)
+                }
             }
         }
     }
@@ -179,7 +185,8 @@ private fun UserReadyContent(
     onOpenAddFeatureDialog: () -> Unit,
     onRequestDeleteItem: (id: String, name: String) -> Unit,
     onRequestDeleteFeature: (id: String, name: String) -> Unit,
-    onOpenEditItemImageDialog: (itemId: String) -> Unit
+    onOpenEditItemImageDialog: (itemId: String) -> Unit,
+    onShowItemImagePreview: (url: String) -> Unit
 ) {
     when {
         state.evaluationEditor != null -> {
@@ -206,7 +213,8 @@ private fun UserReadyContent(
                 features                  = state.features,
                 currentUserId             = state.currentUserId,
                 myEvaluationByFeature     = state.myEvaluationByFeature,
-                onEditImage               = onOpenEditItemImageDialog
+                onEditImage               = onOpenEditItemImageDialog,
+                onPreviewImage            = onShowItemImagePreview
             )
         }
         else -> {
@@ -412,7 +420,8 @@ private fun UserItemDetailContent(
     features: List<Feature>,
     currentUserId: String,
     myEvaluationByFeature: Map<String, List<String>>,
-    onEditImage: (itemId: String) -> Unit
+    onEditImage: (itemId: String) -> Unit,
+    onPreviewImage: (url: String) -> Unit
 ) {
     val isOwner = item.createdBy == currentUserId && currentUserId.isNotEmpty()
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
@@ -424,6 +433,7 @@ private fun UserItemDetailContent(
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .then(if (url != null) Modifier.clickable { onPreviewImage(url) } else Modifier)
             ) {
                 if (url != null) {
                     SubcomposeAsyncImage(
@@ -882,6 +892,33 @@ private fun EditItemImageDialog(
             }
         }
     )
+}
+
+// ---------------------------------------------------------------------------
+// Full-size image preview dialog
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun ImagePreviewDialog(url: String, onDismiss: () -> Unit) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.9f))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model              = url,
+                contentDescription = null,
+                contentScale       = ContentScale.Fit,
+                modifier           = Modifier.fillMaxSize()
+            )
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

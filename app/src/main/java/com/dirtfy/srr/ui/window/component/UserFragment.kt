@@ -90,7 +90,9 @@ class UserFragment : BaseFragment() {
             onOpenEditItemImageDialog     = viewModel::onOpenEditItemImageDialog,
             onEditItemImagePicked         = viewModel::onEditItemImagePicked,
             onSubmitEditItemImage         = viewModel::onSubmitEditItemImage,
-            onDismissEditItemImageDialog  = viewModel::onDismissEditItemImageDialog
+            onDismissEditItemImageDialog  = viewModel::onDismissEditItemImageDialog,
+            onShowItemImagePreview        = viewModel::onShowItemImagePreview,
+            onDismissItemImagePreview     = viewModel::onDismissItemImagePreview
         )
     }
 }

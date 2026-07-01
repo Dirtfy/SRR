@@ -196,6 +196,18 @@ class UserViewModel(
         }
     }
 
+    fun onShowItemImagePreview(url: String) {
+        (_uiState.value as? UserUiState.Ready)?.let {
+            _uiState.value = it.copy(imagePreviewUrl = url)
+        }
+    }
+
+    fun onDismissItemImagePreview() {
+        (_uiState.value as? UserUiState.Ready)?.let {
+            _uiState.value = it.copy(imagePreviewUrl = null)
+        }
+    }
+
     fun onOpenAddItemDialog() {
         (_uiState.value as? UserUiState.Ready)?.let {
             _uiState.value = it.copy(addItemDialog = UserUiState.Ready.AddItemDialogState())

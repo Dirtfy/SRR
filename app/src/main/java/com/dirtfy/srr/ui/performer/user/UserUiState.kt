@@ -24,7 +24,8 @@ sealed class UserUiState {
         val addItemDialog: AddItemDialogState? = null,
         val addFeatureDialog: AddFeatureDialogState? = null,
         val deleteConfirmation: DeleteConfirmationState? = null,
-        val editItemImageDialog: EditItemImageDialogState? = null
+        val editItemImageDialog: EditItemImageDialogState? = null,
+        val imagePreviewUrl: String? = null
     ) : UserUiState() {
 
         data class EvaluationEditorState(

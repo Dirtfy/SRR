@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.dirtfy.srr.core.util.extractStoragePath
 import com.dirtfy.srr.remote.repository.RemoteStorageRepository
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -99,6 +100,33 @@ class StorageUploadTest {
         file.delete()
 
         assertTrue("unauthenticated upload must fail", result.isFailure)
+    }
+
+    @Test
+    fun deleteImage_removesOldFileAfterImageUpdate() = runBlocking {
+        val repo = RemoteStorageRepository(context)
+
+        val oldFile = createTestImageFile("delete_old_$p.jpg")
+        val oldUrl  = repo.uploadItemImage(Uri.fromFile(oldFile)).getOrThrow()
+        oldFile.delete()
+
+        val newFile = createTestImageFile("delete_new_$p.jpg")
+        repo.uploadItemImage(Uri.fromFile(newFile)).getOrThrow()
+        newFile.delete()
+
+        val deleteResult = repo.deleteImage(oldUrl)
+        assertTrue("deleteImage should succeed: ${deleteResult.exceptionOrNull()?.message}", deleteResult.isSuccess)
+
+        // Verify the old object no longer exists in Storage
+        val oldPath = extractStoragePath(oldUrl)
+            ?: throw IllegalStateException("Cannot extract path from: $oldUrl")
+        var accessDenied = false
+        try {
+            Firebase.storage.reference.child(oldPath).metadata.await()
+        } catch (_: Exception) {
+            accessDenied = true
+        }
+        assertTrue("old image must be unreachable after deletion", accessDenied)
     }
 
     @Test
