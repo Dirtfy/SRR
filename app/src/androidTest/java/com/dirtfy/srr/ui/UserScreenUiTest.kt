@@ -348,26 +348,24 @@ class UserScreenUiTest {
 
     @Test
     fun itemDetail_withImage_imagePreviewDialogNotShownByDefault() {
-        // imagePreviewUrl is null → dialog must not appear
+        // imagePreviewUrl null → no dialog overlay
         setScreen(readyStateWithSelectedItem(itemWithImage("https://example.com/img.jpg")))
-        // Content-description "null" (what AsyncImage uses when contentDescription is null) won't be
-        // findable; verify the dialog scrim (black background) isn't present by checking no dismiss
-        // content-description exists.  We assert that the item-name headline IS shown (detail page).
+        composeTestRule.onAllNodesWithContentDescription("Image preview overlay, tap to close")
+            .assertCountEquals(0)
         composeTestRule.onNodeWithText("Camera").assertIsDisplayed()
     }
 
     @Test
     fun itemDetail_imagePreviewDialog_isShownWhenStateHasPreviewUrl() {
-        // Put imagePreviewUrl in state → dialog must appear on top
+        // imagePreviewUrl non-null → overlay dialog must render
         val state = readyStateWithSelectedItem(
             item            = itemWithImage("https://example.com/img.jpg"),
             imagePreviewUrl = "https://example.com/img.jpg"
         )
         setScreen(state)
-        // The dialog is a full-screen Box wrapping AsyncImage with contentDescription = null.
-        // We verify it is rendered by checking that the root node tree is not empty
-        // and no crash occurs from Dialog + fillMaxSize + usePlatformDefaultWidth=false.
-        composeTestRule.onRoot().assertExists()
+        composeTestRule
+            .onNodeWithContentDescription("Image preview overlay, tap to close")
+            .assertExists()
     }
 
     @Test
@@ -406,10 +404,11 @@ class UserScreenUiTest {
             )
         }
 
-        // The image box covers the detail area; perform a click in the center of the screen
-        composeTestRule.onRoot().performClick()
+        // Click the image area via its semantic content description
+        composeTestRule
+            .onNodeWithContentDescription("Item image, tap to preview")
+            .performClick()
 
-        // After click, the callback should have been invoked with the item's imageUrl
         assert(previewUrl == imageUrl) {
             "Expected preview URL $imageUrl but got $previewUrl"
         }

@@ -24,6 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
@@ -433,7 +435,10 @@ private fun UserItemDetailContent(
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .then(if (url != null) Modifier.clickable { onPreviewImage(url) } else Modifier)
+                    .then(if (url != null) Modifier
+                        .clickable { onPreviewImage(url) }
+                        .semantics { contentDescription = "Item image, tap to preview" }
+                        else Modifier)
             ) {
                 if (url != null) {
                     SubcomposeAsyncImage(
@@ -908,7 +913,8 @@ private fun ImagePreviewDialog(url: String, onDismiss: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.9f))
-                .clickable(onClick = onDismiss),
+                .clickable(onClick = onDismiss)
+                .semantics { contentDescription = "Image preview overlay, tap to close" },
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(
